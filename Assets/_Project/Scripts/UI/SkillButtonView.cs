@@ -45,6 +45,21 @@ namespace Survival.UI
         [SerializeField, Tooltip("Màu số giây khi đang HỒI CHIÊU thường (bom, dash).")]
         private Color _cooldownTimerColor = Color.white;
 
+        [SerializeField, Tooltip(
+            "Làm tối icon khi đang có số giây hiện lên.\n\n" +
+            "Cần thiết vì con số nằm ĐÈ LÊN icon. Icon sáng màu (tâm ngắm trắng) cộng với " +
+            "chữ vàng cho ra độ tương phản gần bằng không — số vẫn hiện đúng nhưng mắt không đọc ra, " +
+            "và người chơi tưởng nó biến mất.")]
+        private bool _dimIconWhileTimerVisible = true;
+
+        [SerializeField, Range(0.05f, 1f), Tooltip("Icon còn lại bao nhiêu phần độ sáng khi có số hiện lên.")]
+        private float _iconDimFactor = 0.35f;
+
+        /// <summary>Số giây đang hiển thị có khác rỗng hay không. Dùng để quyết định làm tối icon.</summary>
+        private bool _timerVisible;
+
+        private bool _lastTimerVisible;
+
         [SerializeField, Tooltip("Màu icon khi skill chưa sẵn sàng.")]
         private Color _disabledTint = new Color(0.45f, 0.45f, 0.45f, 1f);
 
@@ -170,14 +185,6 @@ namespace Survival.UI
             if (_cooldownOverlay != null)
                 _cooldownOverlay.fillAmount = 1f - normalized;
 
-            bool canUse = _skill.CanUse;
-            if (force || canUse != _lastCanUse)
-            {
-                _lastCanUse = canUse;
-                if (_iconImage != null)
-                    _iconImage.color = canUse ? _defaultTint : _disabledTint;
-            }
-
             if (_cooldownText != null)
             {
                 bool usesCharges = _skill.MaxCharges > 0;
@@ -195,8 +202,28 @@ namespace Survival.UI
                 if (force || whole != _lastWholeSecondsLeft)
                 {
                     _lastWholeSecondsLeft = whole;
-                    _cooldownText.text = whole > 0 ? whole.ToString() : string.Empty;
+                    _timerVisible = whole > 0;
+                    _cooldownText.text = _timerVisible ? whole.ToString() : string.Empty;
                     _cooldownText.color = usesCharges ? _chargeTimerColor : _cooldownTimerColor;
+                }
+            }
+
+            // Icon được tô lại SAU khi biết có số hiện lên hay không, vì màu icon
+            // phụ thuộc cả vào trạng thái dùng được lẫn vào việc có con số đè lên nó.
+            bool canUse = _skill.CanUse;
+            if (force || canUse != _lastCanUse || _timerVisible != _lastTimerVisible)
+            {
+                _lastCanUse = canUse;
+                _lastTimerVisible = _timerVisible;
+
+                if (_iconImage != null)
+                {
+                    Color tint = canUse ? _defaultTint : _disabledTint;
+
+                    if (_dimIconWhileTimerVisible && _timerVisible)
+                        tint = new Color(tint.r * _iconDimFactor, tint.g * _iconDimFactor, tint.b * _iconDimFactor, tint.a);
+
+                    _iconImage.color = tint;
                 }
             }
 

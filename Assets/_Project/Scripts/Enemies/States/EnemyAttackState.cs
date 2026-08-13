@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace Survival.Enemies.States
 {
     /// <summary>
@@ -37,12 +35,12 @@ namespace Survival.Enemies.States
     ///    Xoay với một nửa tốc độ (chỉnh được trong config) là điểm cân bằng:
     ///    đi bộ ngang thì vẫn trúng, nhưng Dash (6 unit/giây) thì thoát được.
     /// </summary>
-    public class EnemyAttackState : EnemyStateBase
+    public class EnemyAttackState : EnemyState
     {
         private float _timer;
         private bool _damageApplied;
 
-        public EnemyAttackState(EnemyActor enemy) : base(EnemyStateIds.Attack, enemy) { }
+        public EnemyAttackState(EnemyActor enemy) : base(enemy) { }
 
         public override void OnEnter()
         {
@@ -54,9 +52,8 @@ namespace Survival.Enemies.States
             Enemy.StopMoving();
         }
 
-        public override void OnUpdate()
+        public override void OnUpdate(float deltaTime)
         {
-            float deltaTime = Time.deltaTime;
             _timer += deltaTime;
 
             var config = Enemy.Config;
@@ -80,7 +77,7 @@ namespace Survival.Enemies.States
 
             // Đã ra đòn xong, chờ hết phần thu tay rồi mới sang trạng thái đứng im.
             if (_timer >= config.AttackWindup + config.AttackRecover)
-                GoTo(EnemyStateIds.Idle);
+                GoTo(EEnemyState.Idle);
         }
     }
 }

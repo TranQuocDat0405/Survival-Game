@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace Survival.Enemies.States
 {
     /// <summary>
@@ -10,11 +8,11 @@ namespace Survival.Enemies.States
     /// không nghỉ thì người chơi không bao giờ thoát ra được. Một giây đứng im
     /// là lúc người chơi lùi lại, bắn trả, hoặc đặt bom.
     /// </summary>
-    public class EnemyIdleState : EnemyStateBase
+    public class EnemyIdleState : EnemyState
     {
         private float _timer;
 
-        public EnemyIdleState(EnemyActor enemy) : base(EnemyStateIds.Idle, enemy) { }
+        public EnemyIdleState(EnemyActor enemy) : base(enemy) { }
 
         public override void OnEnter()
         {
@@ -22,12 +20,12 @@ namespace Survival.Enemies.States
             Enemy.StopMoving();
         }
 
-        public override void OnUpdate()
+        public override void OnUpdate(float deltaTime)
         {
-            _timer += Time.deltaTime;
+            _timer += deltaTime;
 
             if (_timer >= Enemy.Config.IdleAfterAttack)
-                GoTo(EnemyStateIds.Approach);
+                GoTo(EEnemyState.Approach);
         }
     }
 }

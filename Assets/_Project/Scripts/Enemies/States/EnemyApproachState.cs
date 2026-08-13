@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace Survival.Enemies.States
 {
     /// <summary>
@@ -7,19 +5,17 @@ namespace Survival.Enemies.States
     ///
     /// Vừa xoay về phía player vừa đi tới. Khi đã vào tầm đánh thì chuyển sang ra đòn.
     /// </summary>
-    public class EnemyApproachState : EnemyStateBase
+    public class EnemyApproachState : EnemyState
     {
-        public EnemyApproachState(EnemyActor enemy) : base(EnemyStateIds.Approach, enemy) { }
+        public EnemyApproachState(EnemyActor enemy) : base(enemy) { }
 
-        public override void OnUpdate()
+        public override void OnUpdate(float deltaTime)
         {
             if (!Enemy.HasTarget)
             {
                 Enemy.StopMoving();
                 return;
             }
-
-            float deltaTime = Time.deltaTime;
 
             Enemy.RotateTowardsTarget(deltaTime);
             Enemy.MoveTowardsTarget();
@@ -29,7 +25,7 @@ namespace Survival.Enemies.States
             // của mỗi con quái — mà kết quả so sánh thì hoàn toàn tương đương.
             float range = Enemy.Config.AttackRange;
             if (Enemy.SqrDistanceToTarget() <= range * range)
-                GoTo(EnemyStateIds.Attack);
+                GoTo(EEnemyState.Attack);
         }
 
         public override void OnExit() => Enemy.StopMoving();

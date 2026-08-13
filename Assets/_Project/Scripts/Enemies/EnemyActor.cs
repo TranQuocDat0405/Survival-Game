@@ -27,7 +27,6 @@ namespace Survival.Enemies
         [Header("Tham chiếu trong prefab")]
         [SerializeField] private Health _health;
         [SerializeField] private Rigidbody _rigidbody;
-        [SerializeField] private NFramework.StateMachine _stateMachine;
 
         [SerializeField, Tooltip("Nút chứa phần hình ảnh. Model của quái nằm dưới đây.")]
         private Transform _visualRoot;
@@ -45,6 +44,15 @@ namespace Survival.Enemies
         private Transform _cachedTransform;
         private bool _statesBuilt;
         private bool _setupCalled;
+
+        /// <summary>
+        /// Máy trạng thái là object C# thuần do chính lớp này sở hữu và gọi Tick,
+        /// KHÔNG phải một component gắn trên GameObject. Nhờ vậy Unity không có gì để
+        /// lưu xuống scene, và tham chiếu từ trạng thái tới con quái luôn còn nguyên.
+        /// </summary>
+        private readonly EnemyStateMachine _stateMachine = new EnemyStateMachine();
+
+        public EnemyStateMachine StateMachine => _stateMachine;
 
         public StatSet Stats { get; private set; }
         public EnemyConfigSO Config => _config;
@@ -69,7 +77,6 @@ namespace Survival.Enemies
 
             if (_rigidbody == null) _rigidbody = GetComponent<Rigidbody>();
             if (_health == null) _health = GetComponent<Health>();
-            if (_stateMachine == null) _stateMachine = GetComponent<NFramework.StateMachine>();
 
             _rigidbody.useGravity = false;
             _rigidbody.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
@@ -129,10 +136,19 @@ namespace Survival.Enemies
             _rigidbody.velocity = Vector3.zero;
 
             BuildStateMachineOnce();
-            _stateMachine.isRunning = true;
-            _stateMachine.SetState(EnemyStateIds.Approach);
+            _stateMachine.IsRunning = true;
+            _stateMachine.SetState(EEnemyState.Approach);
 
             EnemyRegistry.I?.Register(this);
+        }
+
+        /// <summary>
+        /// AI chạy ở đây thay vì trong một component riêng, nên thứ tự cập nhật rõ ràng
+        /// và deltaTime được truyền thẳng xuống trạng thái (giúp viết test được).
+        /// </summary>
+        private void Update()
+        {
+            _stateMachine.Tick(Time.deltaTime);
         }
 
         /// <summary>
@@ -147,14 +163,9 @@ namespace Survival.Enemies
 
             _statesBuilt = true;
 
-            var states = new System.Collections.Generic.List<NFramework.State>
-            {
-                new EnemyApproachState(this),
-                new EnemyAttackState(this),
-                new EnemyIdleState(this),
-            };
-
-            _stateMachine.Init(states);
+            _stateMachine.Register(EEnemyState.Approach, new EnemyApproachState(this));
+            _stateMachine.Register(EEnemyState.Attack,   new EnemyAttackState(this));
+            _stateMachine.Register(EEnemyState.Idle,     new EnemyIdleState(this));
         }
 
         // ---------------------------------------------------------------- thao tác cho các trạng thái
@@ -223,7 +234,7 @@ namespace Survival.Enemies
         private void HandleDied(Health health)
         {
             StopMoving();
-            _stateMachine.isRunning = false;
+            _stateMachine.IsRunning = false;
 
             EnemyRegistry.I?.NotifyDied(this);
             OnDied?.Invoke(this);
@@ -232,7 +243,7 @@ namespace Survival.Enemies
         public override void OnBeforeReturnToPool()
         {
             base.OnBeforeReturnToPool();
-            _stateMachine.isRunning = false;
+            _stateMachine.IsRunning = false;
             StopMoving();
             EnemyRegistry.I?.Unregister(this);
         }
