@@ -18,71 +18,71 @@
 
 | # | Yêu cầu | Giá trị spec | Trạng thái |
 |---|---|---|---|
-| 2.1 | Máu (HP) khởi đầu | 500 | ⬜ |
-| 2.1 | Tốc độ di chuyển | 2 unit/s | ⬜ |
-| 2.1 | Tốc độ xoay | 180 °/s | ⬜ |
-| 2.1 | Giáp | 0 | ⬜ |
-| 2.1 | Damage Multiplier | 0 | ⬜ |
-| 2.1 | Bắn/bom/dash dùng **forward hiện tại**, không theo joystick | — | ⬜ |
-| 2.2 | `Sát thương nhận = Sát thương gốc − Giáp`, clamp ≥ 0 | — | ⬜ |
-| 2.2 | `Sát thương gây ra = gốc × (1 + DamageMultiplier)` | — | ⬜ |
-| 2.2 | Giáp áp dụng cho **cả đòn chém lẫn độc** | — | ⬜ |
+| 2.1 | Máu (HP) khởi đầu | 500 | ✅ |
+| 2.1 | Tốc độ di chuyển | 2 unit/s | ✅ |
+| 2.1 | Tốc độ xoay | 180 °/s | ✅ |
+| 2.1 | Giáp | 0 | ✅ |
+| 2.1 | Damage Multiplier | 0 | ✅ |
+| 2.1 | Bắn/bom/dash dùng **forward hiện tại**, không theo joystick | — | ✅ |
+| 2.2 | `Sát thương nhận = Sát thương gốc − Giáp`, clamp ≥ 0 | — | ✅ |
+| 2.2 | `Sát thương gây ra = gốc × (1 + DamageMultiplier)` | — | ✅ |
+| 2.2 | Giáp áp dụng cho **cả đòn chém lẫn độc** | — | ✅ |
 
 ### 3. Kỹ năng nhân vật
 
 | # | Yêu cầu | Giá trị spec | Trạng thái |
 |---|---|---|---|
-| 3.1 | Bắn 3 viên hình nón −15° / 0° / +15° | — | ⬜ |
-| 3.1 | Sát thương gốc mỗi viên | 10 | ⬜ |
-| 3.1 | Tối đa 3 charge, mỗi phát tốn 1 | 3 | ⬜ |
-| 3.1 | Hồi +1 charge / 3 s (chỉ khi chưa đầy) | 3 s | ⬜ |
-| 3.1 | Giãn cách tối thiểu 2 phát bắn (chống spam) | 0.5 s | ⬜ |
-| 3.1 | Không đủ charge → không bắn được | — | ⬜ |
-| 3.2 | Bom: nổ sau 2 s, 50 dmg gốc, bán kính 5 unit | — | ⬜ |
-| 3.2 | Bom cooldown | 12 s | ⬜ |
-| 3.3 | Dash: 3 unit trong 0.5 s theo forward | — | ⬜ |
-| 3.3 | Hết lướt nổ 15 dmg gốc, bán kính 3 unit | — | ⬜ |
-| 3.3 | Dash cooldown | 6 s | ⬜ |
+| 3.1 | Bắn 3 viên hình nón −15° / 0° / +15° | — | ✅ |
+| 3.1 | Sát thương gốc mỗi viên | 10 | ✅ |
+| 3.1 | Tối đa 3 charge, mỗi phát tốn 1 | 3 | ✅ |
+| 3.1 | Hồi +1 charge / 3 s (chỉ khi chưa đầy) | 3 s | ✅ |
+| 3.1 | Giãn cách tối thiểu 2 phát bắn (chống spam) | 0.5 s | ✅ |
+| 3.1 | Không đủ charge → không bắn được | — | ✅ |
+| 3.2 | Bom: nổ sau 2 s, 50 dmg gốc, bán kính 5 unit | — | ✅ |
+| 3.2 | Bom cooldown | 12 s | ✅ |
+| 3.3 | Dash: 3 unit trong 0.5 s theo forward | — | ✅ |
+| 3.3 | Hết lướt nổ 15 dmg gốc, bán kính 3 unit | — | ✅ |
+| 3.3 | Dash cooldown | 6 s | ✅ |
 
 ### 4. Kẻ địch
 
 | # | Yêu cầu | Giá trị spec | Trạng thái |
 |---|---|---|---|
-| 4.1 | Quái cận chiến — Máu | 220 | ⬜ |
-| 4.1 | Tốc độ di chuyển | 3 unit/s | ⬜ |
-| 4.1 | Tấn công cone 50°, tầm 1.3 unit, 30 dmg gốc, 1 lần/đòn | — | ⬜ |
-| 4.1 | Behavior: tiếp cận → tấn công → đứng im 1 s → lặp | — | ⬜ |
-| 4.2 | Quái tầm xa — Máu | 180 | ⬜ |
-| 4.2 | Tốc độ di chuyển | 2.7 unit/s | ⬜ |
-| 4.2 | Tầm tiếp cận để bắn | 3 unit | ⬜ |
-| 4.2 | Đạn độc bay thẳng, tối đa 5 unit, tốc độ 10 unit/s | — | ⬜ |
-| 4.2 | Độc: 30 dmg gốc/s, tick ngay lúc trúng, kéo dài 3 s | — | ⬜ |
-| 4.2 | Tổng **4 tick** (t=0,1,2,3) | 4 | ⬜ |
-| 4.2 | Refresh: dính lại → reset thời gian, **không stack** damage | — | ⬜ |
-| 4.2 | Behavior: tiếp cận 3 unit → bắn → đứng im 1 s → lặp | — | ⬜ |
+| 4.1 | Quái cận chiến — Máu | 220 | ✅ |
+| 4.1 | Tốc độ di chuyển | 3 unit/s | ✅ |
+| 4.1 | Tấn công cone 50°, tầm 1.3 unit, 30 dmg gốc, 1 lần/đòn | — | ✅ |
+| 4.1 | Behavior: tiếp cận → tấn công → đứng im 1 s → lặp | — | ✅ |
+| 4.2 | Quái tầm xa — Máu | 180 | ✅ |
+| 4.2 | Tốc độ di chuyển | 2.7 unit/s | ✅ |
+| 4.2 | Tầm tiếp cận để bắn | 3 unit | ✅ |
+| 4.2 | Đạn độc bay thẳng, tối đa 5 unit, tốc độ 10 unit/s | — | ✅ |
+| 4.2 | Độc: 30 dmg gốc/s, tick ngay lúc trúng, kéo dài 3 s | — | ✅ |
+| 4.2 | Tổng **4 tick** (t=0,1,2,3) | 4 | ✅ |
+| 4.2 | Refresh: dính lại → reset thời gian, **không stack** damage | — | ✅ |
+| 4.2 | Behavior: tiếp cận 3 unit → bắn → đứng im 1 s → lặp | — | ✅ |
 
 ### 5. Wave, kinh nghiệm, lên cấp
 
 | # | Yêu cầu | Giá trị spec | Trạng thái |
 |---|---|---|---|
-| 5 | Mỗi wave spawn ngẫu nhiên 3–4 quái cận chiến | 3–4 | ⬜ |
-| 5 | + 1–2 quái tầm xa | 1–2 | ⬜ |
-| 5 | Chỉ spawn wave kế khi **clear hết** wave hiện tại | — | ⬜ |
-| 5 | Giết 1 quái → +30 EXP | 30 | ⬜ |
-| 5 | Đủ 100 EXP → lên 1 cấp, **EXP dư giữ lại** | 100 | ⬜ |
-| 5 | Lên cấp: +40 máu hiện tại, +40 máu tối đa | +40 / +40 | ⬜ |
-| 5 | Lên cấp: +2 giáp, +0.1 Damage Multiplier | +2 / +0.1 | ⬜ |
+| 5 | Mỗi wave spawn ngẫu nhiên 3–4 quái cận chiến | 3–4 | ✅ |
+| 5 | + 1–2 quái tầm xa | 1–2 | ✅ |
+| 5 | Chỉ spawn wave kế khi **clear hết** wave hiện tại | — | ✅ |
+| 5 | Giết 1 quái → +30 EXP | 30 | ✅ |
+| 5 | Đủ 100 EXP → lên 1 cấp, **EXP dư giữ lại** | 100 | ✅ |
+| 5 | Lên cấp: +40 máu hiện tại, +40 máu tối đa | +40 / +40 | ✅ |
+| 5 | Lên cấp: +2 giáp, +0.1 Damage Multiplier | +2 / +0.1 | ✅ |
 
 ### 6. UI bắt buộc
 
 | # | Yêu cầu | Trạng thái |
 |---|---|---|
-| 6 | Overlay: thanh máu player | ⬜ |
-| 6 | Overlay: số level hiện tại | ⬜ |
-| 6 | Joystick ảo điều khiển di chuyển | ⬜ |
-| 6 | Nút dùng kỹ năng (đánh thường, bom, dash) | ⬜ |
-| 6 | Hiển thị cooldown trên nút kỹ năng | ⬜ |
-| 6 | Thanh máu từng con quái, gắn trên đầu (**world space**) | ⬜ |
+| 6 | Overlay: thanh máu player | ✅ |
+| 6 | Overlay: số level hiện tại | ✅ |
+| 6 | Joystick ảo điều khiển di chuyển | ✅ |
+| 6 | Nút dùng kỹ năng (đánh thường, bom, dash) | ✅ |
+| 6 | Hiển thị cooldown trên nút kỹ năng | ✅ |
+| 6 | Thanh máu từng con quái, gắn trên đầu (**world space**) | ✅ |
 
 ### 7. Tiêu chí chấm
 
