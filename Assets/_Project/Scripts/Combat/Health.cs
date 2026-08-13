@@ -67,6 +67,22 @@ namespace Survival.Combat
         /// Gắn nguồn chỉ số rồi hồi đầy máu. Gọi mỗi khi nhân vật được sinh ra
         /// hoặc được lấy lại từ pool (pool = tái sử dụng object cũ thay vì tạo mới, xem PoolService).
         /// </summary>
+        /// <summary>
+        /// Tự khởi tạo bằng máu dự phòng nếu không ai gọi <see cref="Initialize"/>.
+        ///
+        /// Nếu thiếu bước này, một object chỉ gắn mỗi Health (bia tập bắn, thùng gỗ phá được,
+        /// vật cản...) sẽ sinh ra với 0 máu và <c>IsAlive</c> bằng false — tức là "đã chết sẵn",
+        /// đạn bắn vào không ăn thua và không có lỗi nào hiện ra để biết vì sao.
+        ///
+        /// Điều kiện <c>_stats == null</c> bảo đảm không ghi đè: nếu PlayerActor đã kịp gọi
+        /// Initialize trước thì hàm này không làm gì cả.
+        /// </summary>
+        private void Awake()
+        {
+            if (_stats == null && !IsAlive)
+                ResetToFull();
+        }
+
         public void Initialize(IStatProvider stats)
         {
             if (_stats != null)

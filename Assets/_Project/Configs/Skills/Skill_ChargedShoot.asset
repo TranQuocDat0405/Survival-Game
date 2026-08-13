@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab71c050c25c64e41acbd2764f99c460, type: 3}
+  m_Name: Skill_ChargedShoot
+  m_EditorClassIdentifier: 
+  _displayName: "B\u1EAFn"
+  _icon: {fileID: 0}
+  _cooldown: 0.5
+  _animationTrigger: Shoot
+  _projectilePrefab: {fileID: 7473458508441177573, guid: 6abf2ce82bbe72344895d4161134f8cc, type: 3}
+  _spreadAngles:
+  - -15
+  - 0
+  - 15
+  _damagePerProjectile: 10
+  _projectileSpeed: 18
+  _projectileRange: 12
+  _maxCharges: 3
+  _chargeRegenTime: 3
