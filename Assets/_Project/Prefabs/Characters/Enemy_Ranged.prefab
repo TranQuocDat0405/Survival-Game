@@ -61,7 +61,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 11d7776c5248a87479a943a70dd9adcc, type: 2}
+  - {fileID: 2100000, guid: 035e4fe55d4db1543b1f93f33b38338d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -161,7 +161,7 @@ GameObject:
   - component: {fileID: 44615084259310853}
   - component: {fileID: 6068002065902928803}
   m_Layer: 9
-  m_Name: Enemy_Melee
+  m_Name: Enemy_Ranged
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -265,7 +265,7 @@ MonoBehaviour:
   EventOnBeforeReturnPool:
     m_PersistentCalls:
       m_Calls: []
-  _config: {fileID: 11400000, guid: cf88ab929e9ce6942bdc2eb621cdc095, type: 2}
+  _config: {fileID: 11400000, guid: b2496977c3489f744aef33c86645801a, type: 2}
   _health: {fileID: 1075865188585172084}
   _rigidbody: {fileID: 8699741162236033463}
   _visualRoot: {fileID: 6103088598583072632}

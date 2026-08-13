@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5b8dc32b99b59640a48ada04c82835c, type: 3}
+  m_Name: Enemy_Ranged
+  m_EditorClassIdentifier: 
+  _displayName: "Qu\xE1i t\u1EA7m xa"
+  _visualPrefab: {fileID: 0}
+  _visualScale: 1
+  _baseStats:
+  - Type: 0
+    Value: 180
+  - Type: 1
+    Value: 2.7
+  - Type: 2
+    Value: 360
+  - Type: 3
+    Value: 0
+  _attackWindup: 0.45
+  _attackRecover: 0.3
+  _idleAfterAttack: 1
+  _trackTargetDuringWindup: 1
+  _windupTrackingFactor: 0.5
+  _attack:
+    rid: 4511735220291502085
+  _expReward: 30
+  references:
+    version: 2
+    RefIds:
+    - rid: 4511735220291502085
+      type: {class: ProjectileAttack, ns: Survival.Enemies.Attacks, asm: Assembly-CSharp}
+      data:
+        _range: 3
+        _projectilePrefab: {fileID: 4798693839686701620, guid: 3e26e69e95df3ce44a2cc6f52daed6ed, type: 3}
+        _projectileSpeed: 10
+        _projectileMaxDistance: 5
+        _impactDamage: 0
+        _statusEffect:
+          rid: 4511735220291502087
+    - rid: 4511735220291502087
+      type: {class: PoisonEffect, ns: Survival.Combat.StatusEffects, asm: Assembly-CSharp}
+      data:
+        _damagePerTick: 30
+        _tickInterval: 1
+        _totalTicks: 4
+        _tickOnRefresh: 1
