@@ -38,6 +38,20 @@ namespace Survival.Player
         /// <summary>Hướng người chơi muốn đi, đã đổi sang toạ độ thế giới. Do bên ngoài ghi vào mỗi khung hình.</summary>
         private Vector3 _desiredDirection;
 
+        /// <summary>
+        /// Hướng người chơi muốn NHẮM, tách rời khỏi hướng di chuyển.
+        ///
+        /// Khi đang nhắm, thân xoay về hướng này thay vì hướng đang chạy — nhờ đó người chơi
+        /// vừa chạy tới trước vừa bắn ra sau lưng được.
+        ///
+        /// RẤT QUAN TRỌNG: đây chỉ là MỤC TIÊU XOAY, không phải hướng đạn bay.
+        /// Thân vẫn xoay dần với tốc độ 180 độ/giây theo spec, và đạn vẫn luôn bay theo
+        /// <c>transform.forward</c> tại đúng thời điểm khai hoả. Nghĩa là bẻ cần nhắm ra sau lưng
+        /// thì vẫn phải mất khoảng một giây thân mới quay xong — đúng như spec mô tả,
+        /// chỉ khác là bây giờ người chơi CHỌN được hướng xoay thay vì bị buộc theo hướng chạy.
+        /// </summary>
+        private Vector3 _aimDirection;
+
         private float _inputMagnitude;
 
         /// <summary>Bị khoá khi đang lướt dash — lúc đó dash tự lo việc di chuyển.</summary>
@@ -94,6 +108,20 @@ namespace Survival.Player
             _desiredDirection = new Vector3(screenInput.x, 0f, screenInput.y).normalized;
         }
 
+        /// <summary>
+        /// Đặt hướng nhắm. Truyền vector 0 để thôi nhắm và quay lại xoay theo hướng chạy.
+        /// Nhận toạ độ màn hình giống <see cref="SetMoveInput"/> để hai nguồn input đồng nhất.
+        /// </summary>
+        public void SetAimInput(Vector2 screenAim)
+        {
+            _aimDirection = screenAim.sqrMagnitude < 0.0001f
+                ? Vector3.zero
+                : new Vector3(screenAim.x, 0f, screenAim.y).normalized;
+        }
+
+        /// <summary>Đang có hướng nhắm hay không. UI dùng để vẽ mũi chỉ hướng.</summary>
+        public bool IsAiming => _aimDirection.sqrMagnitude > 0.0001f;
+
         private void FixedUpdate()
         {
             float deltaTime = Time.fixedDeltaTime;
@@ -110,13 +138,21 @@ namespace Survival.Player
 
         private void RotateTowardsDesired(float deltaTime)
         {
-            if (_desiredDirection.sqrMagnitude < 0.0001f)
+            // Hướng nhắm được ưu tiên hơn hướng chạy. Nhờ vậy người chơi chạy về một phía
+            // mà vẫn quay người bắn về phía khác — thứ bắt buộc phải có khi quái đuổi sau lưng
+            // mà nhân vật thì chỉ chạy 2 unit/giây còn quái chạy 3.
+            Vector3 target = IsAiming ? _aimDirection : _desiredDirection;
+
+            if (target.sqrMagnitude < 0.0001f)
                 return;
 
+            // Tốc độ xoay LUÔN là chỉ số RotationSpeed, dù xoay theo hướng chạy hay hướng nhắm.
+            // Không có đường tắt nào cho phép xoay tức thì — luật 180 độ/giây của spec
+            // được áp dụng như nhau cho mọi trường hợp.
             float rotationSpeed = _stats != null ? _stats.Get(EStatType.RotationSpeed) : 180f;
 
-            Quaternion target = Quaternion.LookRotation(_desiredDirection, Vector3.up);
-            Quaternion next = Quaternion.RotateTowards(_rigidbody.rotation, target, rotationSpeed * deltaTime);
+            Quaternion desired = Quaternion.LookRotation(target, Vector3.up);
+            Quaternion next = Quaternion.RotateTowards(_rigidbody.rotation, desired, rotationSpeed * deltaTime);
 
             _rigidbody.MoveRotation(next);
         }

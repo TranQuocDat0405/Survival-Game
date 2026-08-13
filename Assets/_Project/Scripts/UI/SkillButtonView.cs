@@ -17,7 +17,7 @@ namespace Survival.UI
     /// Ảnh đó phủ lên icon và bị "ăn" dần theo hình quạt tròn giống kim đồng hồ,
     /// nên người chơi nhìn phát biết còn bao lâu mà không cần đọc số.
     /// </summary>
-    public class SkillButtonView : MonoBehaviour, IPointerDownHandler
+    public class SkillButtonView : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
         [SerializeField] private Image _iconImage;
 
@@ -63,8 +63,33 @@ namespace Survival.UI
         [SerializeField, Tooltip("Màu icon khi skill chưa sẵn sàng.")]
         private Color _disabledTint = new Color(0.45f, 0.45f, 0.45f, 1f);
 
+        [Header("Cần nhắm")]
+        [SerializeField, Tooltip(
+            "CHỈ ĐỌC lúc chạy — giá trị thật do Bind quyết định.\n\n" +
+            "Nút trở thành cần nhắm khi và chỉ khi nó được giao một hàm điều khiển hướng nhắm. " +
+            "Suy ra như vậy thay vì dùng một cờ riêng, để không bao giờ xảy ra trường hợp " +
+            "nút bật chế độ nhắm mà lại không có gì nhận hướng nhắm — khi đó nút sẽ chỉ " +
+            "im lặng chờ thả tay mà không ai hiểu vì sao nó chậm.")]
+        private bool _useAimDrag;
+
+        [SerializeField, Tooltip("Kéo xa bao nhiêu pixel thì mới tính là đang nhắm. Ngắn hơn thì coi như bấm thường.")]
+        private float _aimDeadZonePixels = 18f;
+
+        [SerializeField, Tooltip("Kéo xa bao nhiêu pixel thì cần nhắm coi như đã đẩy hết cỡ.")]
+        private float _aimMaxRadiusPixels = 110f;
+
+        [SerializeField, Tooltip("Núm chỉ hướng nhắm, di chuyển theo ngón tay. Có thể để trống.")]
+        private RectTransform _aimKnob;
+
         private SkillRuntime _skill;
         private System.Action _onPressed;
+
+        /// <summary>Báo hướng nhắm ra ngoài. Vector 0 nghĩa là thôi nhắm.</summary>
+        private System.Action<Vector2> _onAim;
+
+        private Vector2 _pointerStart;
+        private bool _isDragging;
+        private Vector2 _aimVector;
 
         [SerializeField, Tooltip("Nền tròn của nút. SkillBarView đổi màu nút chính qua đây.")]
         private Image _backgroundImage;
@@ -124,10 +149,21 @@ namespace Survival.UI
             }
         }
 
-        public void Bind(SkillRuntime skill, System.Action onPressed)
+        public void Bind(SkillRuntime skill, System.Action onPressed, System.Action<Vector2> onAim = null)
         {
             _skill = skill;
             _onPressed = onPressed;
+            _onAim = onAim;
+
+            // Nút chỉ thành cần nhắm khi thực sự có nơi nhận hướng nhắm.
+            // Bom và dash không được giao hàm này nên giữ nguyên hành vi bấm-là-ra-ngay.
+            _useAimDrag = onAim != null;
+
+            if (_aimKnob != null)
+            {
+                _aimKnob.gameObject.SetActive(_useAimDrag);
+                _aimKnob.anchoredPosition = Vector2.zero;
+            }
 
             if (_iconImage != null)
             {
@@ -157,11 +193,80 @@ namespace Survival.UI
         }
 
         /// <summary>
-        /// Dùng <c>IPointerDownHandler</c> thay vì <c>Button.onClick</c>:
-        /// onClick chỉ kích hoạt khi người chơi NHẢ tay ra, tạo cảm giác trễ rõ rệt
-        /// trong một game hành động. Bấm xuống là bắn ngay thì phản hồi tức thì.
+        /// Nút thường: bấm xuống là bắn ngay.
+        ///
+        /// Dùng <c>IPointerDownHandler</c> thay vì <c>Button.onClick</c> vì onClick chỉ kích hoạt
+        /// khi NHẢ tay, tạo cảm giác trễ rõ rệt trong một game hành động.
+        ///
+        /// Nút có cần nhắm thì ngược lại: bấm xuống chỉ bắt đầu nhắm, thả ra mới bắn —
+        /// vì lúc bấm xuống ta chưa biết người chơi muốn bắn về hướng nào.
         /// </summary>
-        public void OnPointerDown(PointerEventData eventData) => _onPressed?.Invoke();
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            if (!_useAimDrag)
+            {
+                _onPressed?.Invoke();
+                return;
+            }
+
+            _pointerStart = eventData.position;
+            _isDragging = false;
+            _aimVector = Vector2.zero;
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (!_useAimDrag)
+                return;
+
+            Vector2 delta = eventData.position - _pointerStart;
+
+            if (delta.magnitude < _aimDeadZonePixels)
+            {
+                // Chưa kéo đủ xa: coi như tay đang rung chứ không phải muốn nhắm.
+                if (_isDragging)
+                {
+                    _isDragging = false;
+                    _aimVector = Vector2.zero;
+                    _onAim?.Invoke(Vector2.zero);
+                    MoveKnob(Vector2.zero);
+                }
+                return;
+            }
+
+            _isDragging = true;
+            _aimVector = delta.normalized;
+            _onAim?.Invoke(_aimVector);
+
+            // Núm bị giới hạn trong bán kính cho trước để không văng ra khỏi nút.
+            MoveKnob(Vector2.ClampMagnitude(delta, _aimMaxRadiusPixels));
+        }
+
+        /// <summary>
+        /// Thả tay: bắn, rồi thôi nhắm.
+        ///
+        /// Thứ tự này quan trọng. Phải bắn TRƯỚC khi bỏ hướng nhắm, nếu không thân sẽ
+        /// bắt đầu xoay ngược về hướng đang chạy ngay trong khung hình đó và viên đạn
+        /// bay lệch khỏi chỗ người chơi vừa ngắm.
+        /// </summary>
+        public void OnPointerUp(PointerEventData eventData)
+        {
+            if (!_useAimDrag)
+                return;
+
+            _onPressed?.Invoke();
+
+            _isDragging = false;
+            _aimVector = Vector2.zero;
+            _onAim?.Invoke(Vector2.zero);
+            MoveKnob(Vector2.zero);
+        }
+
+        private void MoveKnob(Vector2 offset)
+        {
+            if (_aimKnob != null)
+                _aimKnob.anchoredPosition = offset;
+        }
 
         private void Update()
         {

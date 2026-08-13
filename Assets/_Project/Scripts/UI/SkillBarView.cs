@@ -95,7 +95,13 @@ namespace Survival.UI
                 // Biến cục bộ là bắt buộc ở đây. Nếu dùng thẳng biến đếm 'i' trong hàm ẩn danh,
                 // mọi nút sẽ cùng nhớ một biến 'i' và sau vòng lặp tất cả đều gọi skill cuối cùng.
                 int index = i;
-                button.Bind(skills[i], () => _player.TryUseSkill(index));
+
+                // Chỉ nút đánh thường mới nhận được quyền điều khiển hướng nhắm.
+                System.Action<Vector2> onAim = i == 0
+                    ? (System.Action<Vector2>)(aim => _player.Motor.SetAimInput(aim))
+                    : null;
+
+                button.Bind(skills[i], () => _player.TryUseSkill(index), onAim);
 
                 _buttons.Add(button);
             }

@@ -1167,7 +1167,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: dd290eeb4f1ee5a498ca05484fa403e1, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: -0.00000004371139
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: dd290eeb4f1ee5a498ca05484fa403e1, type: 3}
       propertyPath: m_LocalRotation.x
@@ -1179,7 +1179,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: dd290eeb4f1ee5a498ca05484fa403e1, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: dd290eeb4f1ee5a498ca05484fa403e1, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -2166,6 +2166,8 @@ MonoBehaviour:
   _skillKeys: 430100003100000032000000
   _alternateKeys: 000000006500000020000000
   _allowHoldToRepeat: 0
+  _aimWithMouse: 1
+  _aimPlaneHeight: 0.7
 --- !u!114 &1318249176
 MonoBehaviour:
   m_ObjectHideFlags: 0

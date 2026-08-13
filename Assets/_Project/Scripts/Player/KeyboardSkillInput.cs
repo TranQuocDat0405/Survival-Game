@@ -44,10 +44,65 @@ namespace Survival.Player
             "'bắn ngay 3 phát để dứt điểm, hay giữ lại một charge phòng khi quái áp sát'.")]
         private bool _allowHoldToRepeat = false;
 
+        [Header("Ngắm bằng chuột (chỉ dùng trên máy tính)")]
+        [SerializeField, Tooltip(
+            "Cho nhân vật xoay về phía con trỏ chuột.\n\n" +
+            "Người chấm sẽ bấm Play trên Editor và chơi bằng chuột. Nếu không có cái này, " +
+            "họ chỉ bắn được về đúng hướng đang chạy — trong khi quái nhanh hơn player " +
+            "và luôn bám sau lưng, gần như không thể bắn trúng.\n\n" +
+            "Trên điện thoại thì không có chuột nên phần này tự vô hiệu.")]
+        private bool _aimWithMouse = true;
+
+        [SerializeField, Tooltip("Mặt phẳng mà tia chuột chiếu xuống, tính theo độ cao. Nên đặt ngang tầm ngực nhân vật.")]
+        private float _aimPlaneHeight = 0.7f;
+
+        private Camera _camera;
+        private PlayerMotor _motor;
+
         private void Awake()
         {
             if (_player == null)
                 _player = GetComponent<PlayerActor>();
+
+            _motor = GetComponent<PlayerMotor>();
+        }
+
+        /// <summary>
+        /// Chiếu tia từ con trỏ chuột xuống mặt phẳng ngang tầm nhân vật, rồi lấy hướng từ
+        /// nhân vật tới điểm đó làm hướng nhắm.
+        ///
+        /// Giống hệt cần nhắm trên điện thoại, đây chỉ là MỤC TIÊU XOAY.
+        /// Thân vẫn xoay dần 180 độ/giây và đạn vẫn bay theo forward hiện tại — spec giữ nguyên.
+        /// </summary>
+        private void UpdateMouseAim()
+        {
+            if (!_aimWithMouse || _motor == null)
+                return;
+
+            if (_camera == null)
+            {
+                _camera = Camera.main;
+                if (_camera == null)
+                    return;
+            }
+
+            var plane = new Plane(Vector3.up, new Vector3(0f, _aimPlaneHeight, 0f));
+            var ray = _camera.ScreenPointToRay(Input.mousePosition);
+
+            if (!plane.Raycast(ray, out float distance))
+                return;
+
+            Vector3 point = ray.GetPoint(distance);
+            Vector3 toPoint = point - transform.position;
+            toPoint.y = 0f;
+
+            // Chuột nằm gần như ngay trên đầu nhân vật thì hướng nhắm không còn ý nghĩa,
+            // giữ nguyên hướng cũ thay vì để nhân vật quay loạn.
+            if (toPoint.sqrMagnitude < 0.25f)
+                return;
+
+            toPoint.Normalize();
+            _motor.SetAimInput(new Vector2(toPoint.x, toPoint.z));
         }
 
         private void Update()
@@ -60,6 +115,9 @@ namespace Survival.Player
             // một lần do nút UI nhận, một lần do chuột trái ở đây.
             if (IsPointerOverUI())
                 return;
+
+            // Ngắm chuột chạy trước, để khi bấm bắn ngay sau đó thì thân đã đang xoay đúng hướng.
+            UpdateMouseAim();
 
             for (int i = 0; i < _skillKeys.Length; i++)
             {
