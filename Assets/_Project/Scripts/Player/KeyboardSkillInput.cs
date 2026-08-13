@@ -34,8 +34,15 @@ namespace Survival.Player
             KeyCode.Space,
         };
 
-        [SerializeField, Tooltip("Giữ phím thì bắn liên tục thay vì phải bấm từng phát. Chỉ áp cho skill 0.")]
-        private bool _allowHoldForFirstSkill = true;
+        [SerializeField, Tooltip(
+            "Giữ phím để bắn liên tục.\n\n" +
+            "MẶC ĐỊNH TẮT, và đó là chủ ý. Spec ghi rõ khoảng cách 0.5 giây giữa hai phát bắn là để " +
+            "'chống spam'. Cho giữ phím bắn liên tục chính là spam tự động: người chơi bấm giữ một lần " +
+            "rồi game tự tiêu hết 3 charge, sau đó cứ 3 giây lại tự bắn thêm một phát.\n\n" +
+            "Hệ quả là hệ thống charge mất hết ý nghĩa — nó không còn là tài nguyên để cân nhắc, " +
+            "mà chỉ là cái van tự động. Bấm từng phát thì người chơi mới phải quyết định " +
+            "'bắn ngay 3 phát để dứt điểm, hay giữ lại một charge phòng khi quái áp sát'.")]
+        private bool _allowHoldToRepeat = false;
 
         private void Awake()
         {
@@ -48,39 +55,58 @@ namespace Survival.Player
             if (_player == null)
                 return;
 
+            // Khi ngón tay / con trỏ đang đè lên một nút UI thì bỏ qua bàn phím và chuột.
+            // Nếu không, một cú bấm vào nút kỹ năng sẽ được tính HAI lần:
+            // một lần do nút UI nhận, một lần do chuột trái ở đây.
+            if (IsPointerOverUI())
+                return;
+
             for (int i = 0; i < _skillKeys.Length; i++)
             {
                 if (!IsTriggered(i))
                     continue;
 
                 // Không cần kiểm tra cooldown ở đây: skill tự từ chối nếu chưa sẵn sàng.
-                // Giữ chuột trái sẽ gọi liên tục nhưng luật "cách nhau 0.5 giây" vẫn chặn đúng.
                 _player.TryUseSkill(i);
             }
         }
 
-        private bool IsTriggered(int index)
+        private static bool IsPointerOverUI()
         {
-            bool hold = _allowHoldForFirstSkill && index == 0;
+            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+            if (eventSystem == null)
+                return false;
 
-            KeyCode primary = _skillKeys[index];
-            if (primary != KeyCode.None)
+            if (eventSystem.IsPointerOverGameObject())
+                return true;
+
+            // Trên điện thoại, mỗi ngón tay là một "con trỏ" riêng và phải hỏi theo id của nó.
+            for (int i = 0; i < Input.touchCount; i++)
             {
-                if (hold ? Input.GetKey(primary) : Input.GetKeyDown(primary))
+                if (eventSystem.IsPointerOverGameObject(Input.GetTouch(i).fingerId))
                     return true;
-            }
-
-            if (index < _alternateKeys.Length)
-            {
-                KeyCode alternate = _alternateKeys[index];
-                if (alternate != KeyCode.None)
-                {
-                    if (hold ? Input.GetKey(alternate) : Input.GetKeyDown(alternate))
-                        return true;
-                }
             }
 
             return false;
         }
+
+        private bool IsTriggered(int index)
+        {
+            KeyCode primary = _skillKeys[index];
+            if (primary != KeyCode.None && IsPressed(primary))
+                return true;
+
+            if (index < _alternateKeys.Length)
+            {
+                KeyCode alternate = _alternateKeys[index];
+                if (alternate != KeyCode.None && IsPressed(alternate))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool IsPressed(KeyCode key)
+            => _allowHoldToRepeat ? Input.GetKey(key) : Input.GetKeyDown(key);
     }
 }

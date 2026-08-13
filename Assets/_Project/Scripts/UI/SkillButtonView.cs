@@ -30,6 +30,9 @@ namespace Survival.UI
         [SerializeField, Tooltip("Số charge còn lại. Tự ẩn với skill không dùng charge.")]
         private TextMeshProUGUI _chargeText;
 
+        [SerializeField, Tooltip("Vòng chia đoạn hiển thị charge. Tự ẩn với skill không dùng charge.")]
+        private ChargeRingView _chargeRing;
+
         [SerializeField, Tooltip("Màu icon khi skill chưa sẵn sàng.")]
         private Color _disabledTint = new Color(0.45f, 0.45f, 0.45f, 1f);
 
@@ -53,9 +56,19 @@ namespace Survival.UI
                 _defaultTint = Color.white;
             }
 
-            // Skill không dùng charge trả về -1, khi đó ẩn hẳn ô hiển thị charge đi.
+            // Skill không dùng charge trả về -1, khi đó ẩn hẳn phần hiển thị charge đi.
+            bool usesCharges = skill.MaxCharges > 0;
+
             if (_chargeText != null)
-                _chargeText.gameObject.SetActive(skill.MaxCharges > 0);
+                _chargeText.gameObject.SetActive(usesCharges);
+
+            if (_chargeRing != null)
+            {
+                if (usesCharges)
+                    _chargeRing.Build(skill.MaxCharges);
+                else
+                    _chargeRing.gameObject.SetActive(false);
+            }
 
             Refresh(force: true);
         }
@@ -108,14 +121,20 @@ namespace Survival.UI
                 }
             }
 
-            if (_chargeText != null && _skill.MaxCharges > 0)
+            if (_skill.MaxCharges > 0)
             {
                 int charges = _skill.ChargeCount;
-                if (force || charges != _lastCharges)
+
+                if (_chargeText != null && (force || charges != _lastCharges))
                 {
                     _lastCharges = charges;
                     _chargeText.text = charges.ToString();
                 }
+
+                // Vòng charge cập nhật mỗi khung hình vì đoạn đang hồi phải sáng dần lên mượt.
+                // Bên trong nó cũng chỉ ghi màu khi màu thật sự đổi.
+                if (_chargeRing != null)
+                    _chargeRing.SetCharges(charges, charges >= _skill.MaxCharges ? 1f : normalized);
             }
         }
     }
