@@ -30,6 +30,21 @@ namespace Survival.Skills
         /// <summary>Dùng để chạy coroutine (dash cần di chuyển liên tục trong 0.5 giây).</summary>
         public MonoBehaviour CoroutineRunner;
 
+        /// <summary>Rigidbody của nhân vật. Dash cần nó để đẩy người đi mà vẫn va chạm được với tường.</summary>
+        public Rigidbody OwnerRigidbody;
+
+        /// <summary>
+        /// Khoá / mở quyền điều khiển di chuyển.
+        ///
+        /// Dash cần khoá điều khiển trong 0.5 giây lướt, nếu không thì joystick sẽ vừa đẩy
+        /// theo hướng người chơi giữ, vừa bị dash đẩy theo hướng forward — hai lực đánh nhau,
+        /// quãng đường lướt sẽ không còn đúng 3 unit như spec.
+        ///
+        /// Dùng một hàm uỷ nhiệm (delegate) thay vì tham chiếu thẳng tới PlayerMotor,
+        /// để skill không bị trói vào riêng player — quái cũng có thể dùng dash sau này.
+        /// </summary>
+        public System.Action<bool> SetControlLocked;
+
         public Vector3 SpawnPosition => Muzzle != null ? Muzzle.position : Owner.position;
 
         public Vector3 Forward => Owner.forward;

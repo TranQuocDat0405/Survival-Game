@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eef2ee88195fd2d4893d5521e4737130, type: 3}
+  m_Name: Skill_Dash
+  m_EditorClassIdentifier: 
+  _displayName: Dash
+  _icon: {fileID: 0}
+  _cooldown: 6
+  _animationTrigger: Dash
+  _distance: 3
+  _duration: 0.5
+  _damage: 15
+  _radius: 3
+  _explosionEffectPrefab: {fileID: 0}
+  _effectScalePerUnitRadius: 1

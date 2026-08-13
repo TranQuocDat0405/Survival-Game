@@ -100,6 +100,8 @@ namespace Survival.Player
                 Stats = Stats,
                 TargetMask = _config.EnemyMask,
                 CoroutineRunner = this,
+                OwnerRigidbody = GetComponent<Rigidbody>(),
+                SetControlLocked = locked => _motor.ControlLocked = locked,
             };
 
             _skills.Clear();

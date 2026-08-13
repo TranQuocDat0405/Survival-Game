@@ -27,6 +27,8 @@ MonoBehaviour:
   _inputDeadZone: 0.1
   _skills:
   - {fileID: 11400000, guid: 658a1fc1cc87f084688983275726406e, type: 2}
+  - {fileID: 11400000, guid: 37b7d48666ea15642b59d8a59eb5bf8c, type: 2}
+  - {fileID: 11400000, guid: 46e244cfafc31884293a7f7a2bd294a3, type: 2}
   _enemyMask:
     serializedVersion: 2
     m_Bits: 512
