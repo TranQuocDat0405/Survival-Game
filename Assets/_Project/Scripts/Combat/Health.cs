@@ -41,6 +41,13 @@ namespace Survival.Combat
         /// <summary>Bắn ra khi được hồi máu. Dùng cho hiệu ứng lên cấp.</summary>
         public event Action<Health, float> OnHealed;
 
+        /// <summary>
+        /// Bắn ra khi máu TỐI ĐA đổi (lên cấp +40 máu tối đa).
+        /// Thanh máu phải nghe cả sự kiện này, không chỉ nghe máu hiện tại,
+        /// nếu không tỉ lệ vẽ ra sẽ sai cho tới lần trúng đòn kế tiếp.
+        /// </summary>
+        public event Action<Health> OnMaxChanged;
+
         public bool IsAlive { get; private set; }
 
         public Transform Transform => transform;
@@ -62,8 +69,33 @@ namespace Survival.Combat
         /// </summary>
         public void Initialize(IStatProvider stats)
         {
+            if (_stats != null)
+                _stats.OnStatChanged -= HandleStatChanged;
+
             _stats = stats;
+
+            if (_stats != null)
+                _stats.OnStatChanged += HandleStatChanged;
+
             ResetToFull();
+        }
+
+        private void OnDestroy()
+        {
+            if (_stats != null)
+                _stats.OnStatChanged -= HandleStatChanged;
+        }
+
+        private void HandleStatChanged(EStatType type, float value)
+        {
+            if (type != EStatType.MaxHealth)
+                return;
+
+            // Máu hiện tại không được vượt quá trần mới (phòng khi trần bị hạ xuống).
+            if (Current.Value > value)
+                Current.Value = value;
+
+            OnMaxChanged?.Invoke(this);
         }
 
         public void ResetToFull()

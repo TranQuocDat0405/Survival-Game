@@ -51,5 +51,39 @@ namespace Survival.Config
         public bool MoveAlongForwardOnly => _moveAlongForwardOnly;
         public float InputDeadZone => _inputDeadZone;
         public LayerMask EnemyMask => _enemyMask;
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Unity gọi hàm này mỗi khi file config bị sửa trên Inspector.
+        ///
+        /// Vì chỉ số được lưu dạng danh sách, nếu ai đó lỡ xoá một dòng thì chỉ số đó lặng lẽ
+        /// về 0 — nhân vật đứng im (MoveSpeed 0) hoặc chết ngay khi sinh ra (MaxHealth 0)
+        /// mà không có lỗi nào hiện lên. Kiểm tra ở đây để lỗi lộ ra ngay lúc sửa config,
+        /// thay vì phải mò lúc chơi.
+        /// </summary>
+        private void OnValidate()
+        {
+            foreach (EStatType required in System.Enum.GetValues(typeof(EStatType)))
+            {
+                bool found = false;
+                for (int i = 0; i < _baseStats.Count; i++)
+                {
+                    if (_baseStats[i].Type != required)
+                        continue;
+                    found = true;
+                    break;
+                }
+
+                if (!found)
+                    Debug.LogWarning($"[{name}] thiếu chỉ số '{required}' trong danh sách chỉ số khởi đầu — nó sẽ mặc định bằng 0.", this);
+            }
+
+            for (int i = 0; i < _skills.Count; i++)
+            {
+                if (_skills[i] == null)
+                    Debug.LogWarning($"[{name}] ô skill số {i} đang để trống.", this);
+            }
+        }
+#endif
     }
 }

@@ -64,6 +64,11 @@ namespace Survival.Skills
         /// <summary>
         /// Thử dùng skill. Trả về true nếu đã thực sự khai hoả.
         /// Lớp con chỉ cần cài đặt <see cref="Execute"/>, phần kiểm tra điều kiện đã lo sẵn ở đây.
+        ///
+        /// Cooldown được bắt đầu Ở ĐÂY chứ không giao cho lớp con tự gọi. Nếu giao cho lớp con,
+        /// một skill viết thiếu một dòng sẽ chạy hoàn toàn bình thường nhưng KHÔNG hồi chiêu —
+        /// loại lỗi này không gây crash, không hiện cảnh báo, rất dễ lọt tới lúc nộp bài.
+        /// Đặt ở lớp cha thì skill mới viết sau này không thể quên.
         /// </summary>
         public bool TryUse()
         {
@@ -71,6 +76,7 @@ namespace Survival.Skills
                 return false;
 
             Execute();
+            StartCooldown();
             RaiseUsed();
             return true;
         }
