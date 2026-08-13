@@ -30,8 +30,20 @@ namespace Survival.UI
         [SerializeField, Tooltip("Số charge còn lại. Tự ẩn với skill không dùng charge.")]
         private TextMeshProUGUI _chargeText;
 
+        [SerializeField, Tooltip("Nền tròn phía sau số charge, để số đọc được trên mọi nền.")]
+        private RectTransform _chargeBadge;
+
         [SerializeField, Tooltip("Vòng chia đoạn hiển thị charge. Tự ẩn với skill không dùng charge.")]
         private ChargeRingView _chargeRing;
+
+        [Header("Màu số hiển thị")]
+        [SerializeField, Tooltip(
+            "Màu số giây khi đang HỒI CHARGE. Cố tình đặt trùng màu vòng charge " +
+            "để mắt nối ngay con số này với cái vòng, không nhầm nó với số đạn.")]
+        private Color _chargeTimerColor = new Color(1f, 0.88f, 0.35f);
+
+        [SerializeField, Tooltip("Màu số giây khi đang HỒI CHIÊU thường (bom, dash).")]
+        private Color _cooldownTimerColor = Color.white;
 
         [SerializeField, Tooltip("Màu icon khi skill chưa sẵn sàng.")]
         private Color _disabledTint = new Color(0.45f, 0.45f, 0.45f, 1f);
@@ -76,6 +88,25 @@ namespace Survival.UI
 
             if (_cooldownText != null)
                 _cooldownText.fontSize = size * 0.34f;
+
+            // Số đạn được đẩy HẲN RA NGOÀI đường tròn của nút.
+            // Trước đây nó nằm sát mép trong nên bị chính viền nút và vòng charge che mất một phần.
+            // Đặt tâm huy hiệu ở khoảng cách 0.40 lần kích thước nút theo đường chéo dưới-phải,
+            // tức là nằm ngay ngoài rìa vòng charge, không thứ gì đè lên được.
+            if (_chargeBadge != null)
+            {
+                float badgeSize = size * 0.34f;
+                float offset = size * 0.40f;
+
+                _chargeBadge.sizeDelta = Vector2.one * badgeSize;
+                _chargeBadge.anchorMin = new Vector2(0.5f, 0.5f);
+                _chargeBadge.anchorMax = new Vector2(0.5f, 0.5f);
+                _chargeBadge.pivot = new Vector2(0.5f, 0.5f);
+                _chargeBadge.anchoredPosition = new Vector2(offset, -offset);
+
+                if (_chargeText != null)
+                    _chargeText.fontSize = badgeSize * 0.72f;
+            }
         }
 
         public void Bind(SkillRuntime skill, System.Action onPressed)
@@ -95,6 +126,9 @@ namespace Survival.UI
 
             if (_chargeText != null)
                 _chargeText.gameObject.SetActive(usesCharges);
+
+            if (_chargeBadge != null)
+                _chargeBadge.gameObject.SetActive(usesCharges);
 
             if (_chargeRing != null)
             {
@@ -146,16 +180,23 @@ namespace Survival.UI
 
             if (_cooldownText != null)
             {
-                float remaining = _skill.CooldownRemaining;
+                bool usesCharges = _skill.MaxCharges > 0;
 
-                // Chỉ hiện số khi cooldown còn từ 1 giây trở lên.
-                // Skill bắn có cooldown 0.5 giây — hiện số ở đó thì nút sẽ nhấp nháy chữ "1"
-                // mỗi lần bắn, gây rối mắt mà không cho thêm thông tin gì.
-                int whole = remaining >= 1f ? Mathf.CeilToInt(remaining) : 0;
+                // Skill dùng charge thì con số có ích là "bao lâu nữa có viên tiếp theo",
+                // KHÔNG phải cooldown 0.5 giây (quá ngắn, chỉ làm nháy chữ '1' vô nghĩa).
+                // Skill thường thì ngược lại, con số chính là cooldown của nó.
+                float seconds = usesCharges ? _skill.ChargeTimeRemaining : _skill.CooldownRemaining;
+
+                // Skill thường có cooldown 6 và 12 giây nên luôn qua ngưỡng 1 giây;
+                // ngưỡng này chỉ để chặn mấy phần lẻ cuối cùng nhấp nháy.
+                float threshold = usesCharges ? 0.05f : 1f;
+                int whole = seconds >= threshold ? Mathf.CeilToInt(seconds) : 0;
+
                 if (force || whole != _lastWholeSecondsLeft)
                 {
                     _lastWholeSecondsLeft = whole;
                     _cooldownText.text = whole > 0 ? whole.ToString() : string.Empty;
+                    _cooldownText.color = usesCharges ? _chargeTimerColor : _cooldownTimerColor;
                 }
             }
 

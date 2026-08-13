@@ -118,6 +118,17 @@ namespace Survival.Skills
             }
         }
 
+        /// <summary>Số giây còn lại tới viên đạn kế tiếp. Bằng 0 khi đã đầy 3 charge.</summary>
+        public override float ChargeTimeRemaining
+        {
+            get
+            {
+                if (_charges >= _def.MaxCharges)
+                    return 0f;
+                return Mathf.Max(0f, _def.ChargeRegenTime - _regenTimer);
+            }
+        }
+
         public override void Tick(float deltaTime)
         {
             base.Tick(deltaTime);   // đếm lùi khoảng cách 0.5 giây giữa 2 phát bắn

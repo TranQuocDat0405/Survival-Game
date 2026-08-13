@@ -65,6 +65,12 @@ namespace Survival.Skills
         /// </summary>
         public virtual float ChargeProgress => 1f;
 
+        /// <summary>
+        /// Số giây còn lại tới charge kế tiếp. Bằng 0 khi đã đầy charge hoặc skill không dùng charge.
+        /// Tách khỏi <see cref="CooldownRemaining"/> vì đây là đồng hồ khác — xem ghi chú ở trên.
+        /// </summary>
+        public virtual float ChargeTimeRemaining => 0f;
+
         public virtual bool CanUse => CooldownTimer <= 0f;
 
         /// <summary>Gọi mỗi khung hình để đếm lùi cooldown, hồi charge, chạy hiệu ứng đang diễn ra.</summary>
