@@ -38,6 +38,15 @@ namespace Survival.Enemies
         [SerializeField, Tooltip("Layer được coi là mục tiêu. Với quái thì đây là layer Player.")]
         private LayerMask _targetMask;
 
+        [Header("Lúc chết")]
+        [SerializeField, Min(0f), Tooltip(
+            "Chờ bao lâu sau khi chết rồi mới trả về pool, tính bằng giây.\n" +
+            "Đủ dài để animation gục xuống chạy xong, đủ ngắn để xác không nằm vướng mắt.")]
+        private float _despawnDelay = 1.2f;
+
+        [SerializeField, Tooltip("Collider của quái. Bị tắt ngay khi chết để xác không cản đường và không chặn đạn.")]
+        private Collider _collider;
+
         public event Action<EnemyActor> OnDied;
 
         private EnemyAttackContext _attackContext;
@@ -77,6 +86,7 @@ namespace Survival.Enemies
 
             if (_rigidbody == null) _rigidbody = GetComponent<Rigidbody>();
             if (_health == null) _health = GetComponent<Health>();
+            if (_collider == null) _collider = GetComponent<Collider>();
 
             _rigidbody.useGravity = false;
             _rigidbody.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
@@ -133,7 +143,12 @@ namespace Survival.Enemies
             Stats.SetBase(_config.BaseStats);
             _health.Initialize(Stats);
 
+            // Bật lại mọi thứ đã bị tắt lúc chết. Bắt buộc phải làm vì đây là object
+            // TÁI SỬ DỤNG từ pool — nó mang theo nguyên trạng thái của lần chết trước.
             _rigidbody.velocity = Vector3.zero;
+            _rigidbody.isKinematic = false;
+            if (_collider != null)
+                _collider.enabled = true;
 
             BuildStateMachineOnce();
             _stateMachine.IsRunning = true;
@@ -236,8 +251,32 @@ namespace Survival.Enemies
             StopMoving();
             _stateMachine.IsRunning = false;
 
+            // Tắt va chạm NGAY LẬP TỨC. Nếu để nguyên, cái xác vẫn chặn đường player
+            // và vẫn hứng mũi tên: tia quét của đạn dừng lại ở collider gần nhất,
+            // không gây sát thương (vì đã chết) nhưng cũng không bay tiếp tới con còn sống phía sau.
+            if (_collider != null)
+                _collider.enabled = false;
+
+            // Kinematic để hệ vật lý không đẩy cái xác trượt đi trong lúc chờ biến mất.
+            _rigidbody.isKinematic = true;
+
             EnemyRegistry.I?.NotifyDied(this);
             OnDied?.Invoke(this);
+
+            // Trả về pool sau một nhịp cho animation gục xuống chạy xong.
+            // KHÔNG trả ngay: quái sẽ biến mất đột ngột, người chơi không kịp thấy mình đã giết được nó.
+            // KHÔNG bỏ qua bước này: xác sẽ nằm lại trong scene vĩnh viễn và pool phải tạo object mới
+            // cho từng con quái của mọi wave — tức là pool mất sạch tác dụng.
+            if (_despawnDelay > 0f)
+                StartCoroutine(DespawnAfterDelay());
+            else
+                ReturnToPool();
+        }
+
+        private System.Collections.IEnumerator DespawnAfterDelay()
+        {
+            yield return new WaitForSeconds(_despawnDelay);
+            ReturnToPool();
         }
 
         public override void OnBeforeReturnToPool()

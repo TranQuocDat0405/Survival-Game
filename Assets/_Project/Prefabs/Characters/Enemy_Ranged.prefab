@@ -273,6 +273,8 @@ MonoBehaviour:
   _targetMask:
     serializedVersion: 2
     m_Bits: 256
+  _despawnDelay: 1.2
+  _collider: {fileID: 2157208773981232301}
 --- !u!114 &6068002065902928803
 MonoBehaviour:
   m_ObjectHideFlags: 0

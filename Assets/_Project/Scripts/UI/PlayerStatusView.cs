@@ -57,19 +57,56 @@ namespace Survival.UI
             _health.OnMaxChanged += HandleMaxChanged;
 
             RefreshHealth();
-            SetLevel(1);
-            SetExp(0, 100);
+
+            // Tự nối vào hệ thống EXP nếu có. HUD chỉ NGHE, không bao giờ gọi ngược lại
+            // hệ thống EXP — nhờ vậy hệ thống EXP chạy được kể cả khi không có UI nào cả.
+            _experience = Progression.ExperienceSystem.I;
+            if (_experience != null)
+            {
+                _experience.Level.OnValueChanged += HandleLevelChanged;
+                _experience.CurrentExp.OnValueChanged += HandleExpChanged;
+
+                SetLevel(_experience.Level.Value);
+                SetExp(_experience.CurrentExp.Value, _experience.ExpPerLevel);
+            }
+            else
+            {
+                SetLevel(1);
+                SetExp(0, 100);
+            }
         }
+
+        private Progression.ExperienceSystem _experience;
 
         private void OnDestroy()
         {
-            if (_health == null)
-                return;
-
             // Bắt buộc gỡ đăng ký. Nếu không, khi màn chơi được nạp lại,
             // sự kiện vẫn giữ tham chiếu tới object đã bị huỷ và Unity sẽ ném lỗi.
-            _health.Current.OnValueChanged -= HandleHealthChanged;
-            _health.OnMaxChanged -= HandleMaxChanged;
+            if (_health != null)
+            {
+                _health.Current.OnValueChanged -= HandleHealthChanged;
+                _health.OnMaxChanged -= HandleMaxChanged;
+            }
+
+            if (_experience != null)
+            {
+                _experience.Level.OnValueChanged -= HandleLevelChanged;
+                _experience.CurrentExp.OnValueChanged -= HandleExpChanged;
+            }
+        }
+
+        private void HandleLevelChanged(int level)
+        {
+            SetLevel(level);
+            // Lên cấp thì EXP đã bị trừ đi, phải vẽ lại thanh EXP cho khớp.
+            if (_experience != null)
+                SetExp(_experience.CurrentExp.Value, _experience.ExpPerLevel);
+        }
+
+        private void HandleExpChanged(int exp)
+        {
+            if (_experience != null)
+                SetExp(exp, _experience.ExpPerLevel);
         }
 
         private void HandleHealthChanged(float _) => RefreshHealth();
