@@ -152,6 +152,12 @@ namespace Survival.Player
         {
             _motor.SetMoveInput(Vector2.zero);
             _motor.ControlLocked = true;
+
+            // Bắt buộc phải dừng hẳn. Chỉ khoá điều khiển thôi thì vận tốc CUỐI CÙNG
+            // trước lúc chết vẫn còn nguyên, và vì không có ma sát nên xác player
+            // sẽ trôi ngang màn hình mãi mãi trong khi quái đứng im.
+            _motor.Stop();
+
             OnDied?.Invoke();
         }
 

@@ -145,6 +145,25 @@ namespace Survival.Player
             NormalizedSpeed = _inputMagnitude;
         }
 
+        /// <summary>
+        /// Dừng hẳn mọi chuyển động ngay lập tức.
+        ///
+        /// Phải có hàm riêng chứ không thể xoá vận tốc ngay trong <c>FixedUpdate</c> khi
+        /// <see cref="ControlLocked"/> bật lên. Lý do: Dash CŨNG khoá điều khiển,
+        /// và nó cần tự đặt vận tốc để đẩy người đi — xoá vận tốc ở đó sẽ làm Dash đứng yên tại chỗ.
+        ///
+        /// Nên khoá điều khiển chỉ có nghĩa "joystick không còn quyền", còn việc dừng hẳn
+        /// là một hành động riêng biệt, do bên gọi quyết định khi nào cần.
+        /// </summary>
+        public void Stop()
+        {
+            _rigidbody.velocity = Vector3.zero;
+            _rigidbody.angularVelocity = Vector3.zero;
+            _desiredDirection = Vector3.zero;
+            _inputMagnitude = 0f;
+            NormalizedSpeed = 0f;
+        }
+
         /// <summary>Đặt lại vị trí và dừng hẳn. Dùng khi chơi lại từ đầu.</summary>
         public void Teleport(Vector3 position, Quaternion rotation)
         {

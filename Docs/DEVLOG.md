@@ -120,8 +120,28 @@
 | Damage popup số nổi (verify công thức bằng mắt) | ⬜ |
 | Debug/Cheat panel (kill all, +EXP, god mode, skip wave) | ⬜ |
 | Unit test EditMode (công thức, charge, poison, EXP) | ⬜ |
+| **Animation chết cho player và quái** | ⬜ Ngày 3 (art) |
+| **Shader tan biến cho quái sau khi animation chết xong** | ⬜ Ngày 3–4 |
 | Scene HomeMenu | ⬜ |
 | Refactor bố cục ThirdParty | ⬜ |
+
+---
+
+## 3. Bài học quy trình (rút ra ngày 13/8)
+
+**Mọi lỗi người chơi phát hiện đều nằm ở khe hở giữa "dữ liệu đúng" và "hình ảnh đúng".**
+
+| Lỗi | Đã kiểm chứng | Bỏ sót |
+|---|---|---|
+| Mũi tên dài 7.5 mm | sát thương = 10 ✓ | nhìn không thấy |
+| Nút bắn hiện sai đồng hồ | logic đúng spec ✓ | UI nói ngược lại luật chơi |
+| Số charge bị icon che | đếm 3→2→1 ✓ | chữ vàng trên icon trắng |
+| Thanh máu không tụt | `fillAmount = 0.820` ✓ | `Image` thiếu sprite nên bỏ qua fillAmount |
+| Quái spawn đè lên player | 200/200 điểm spawn ngoài camera ✓ | object trong pool nằm ở gốc toạ độ |
+
+**Nguyên nhân sâu xa:** ảnh chụp qua công cụ không lấy được canvas ở chế độ `Screen Space - Overlay`, nên không tự nhìn thấy UI để kiểm tra.
+
+**Đã khắc phục:** chuyển `HUDCanvas` sang `Screen Space - Camera`. Từ đó ảnh chụp lấy được toàn bộ UI, và lỗi hình ảnh được phát hiện ngay trong lúc làm thay vì phải chờ người chơi báo.
 
 ---
 
