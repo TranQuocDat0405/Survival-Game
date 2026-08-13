@@ -122,18 +122,36 @@ namespace Survival.Player
         /// <summary>Đang có hướng nhắm hay không. UI dùng để vẽ mũi chỉ hướng.</summary>
         public bool IsAiming => _aimDirection.sqrMagnitude > 0.0001f;
 
+        /// <summary>
+        /// Xoay người chạy ở đây, theo nhịp KHUNG HÌNH, không phải nhịp vật lý.
+        ///
+        /// Trước đây phép xoay nằm trong <c>FixedUpdate</c> nên chỉ cập nhật 50 lần mỗi giây,
+        /// trong khi màn hình vẽ 60 lần trở lên — hướng nhìn bị giữ nguyên qua vài khung hình
+        /// rồi mới nhảy một nấc, nhìn ra thành giật.
+        /// Nội suy của Rigidbody không cứu được chỗ này vì xoay đã bị khoá bởi
+        /// <c>FreezeRotation</c>, mà cái đó chỉ nội suy phần vị trí.
+        ///
+        /// Xoay không cần tới hệ vật lý (nhân vật không bị va chạm làm quay, đã khoá rồi),
+        /// nên gán thẳng <c>transform.rotation</c> ở nhịp khung hình là mượt nhất.
+        /// Phần DI CHUYỂN thì vẫn phải ở FixedUpdate, vì nó cần hệ vật lý xử lý va chạm tường.
+        /// </summary>
+        private void Update()
+        {
+            if (ControlLocked)
+                return;
+
+            RotateTowardsDesired(Time.deltaTime);
+        }
+
         private void FixedUpdate()
         {
-            float deltaTime = Time.fixedDeltaTime;
-
             if (ControlLocked)
             {
                 NormalizedSpeed = 0f;
                 return;
             }
 
-            RotateTowardsDesired(deltaTime);
-            MoveStep(deltaTime);
+            MoveStep(Time.fixedDeltaTime);
         }
 
         private void RotateTowardsDesired(float deltaTime)
@@ -152,9 +170,11 @@ namespace Survival.Player
             float rotationSpeed = _stats != null ? _stats.Get(EStatType.RotationSpeed) : 180f;
 
             Quaternion desired = Quaternion.LookRotation(target, Vector3.up);
-            Quaternion next = Quaternion.RotateTowards(_rigidbody.rotation, desired, rotationSpeed * deltaTime);
+            Quaternion next = Quaternion.RotateTowards(transform.rotation, desired, rotationSpeed * deltaTime);
 
-            _rigidbody.MoveRotation(next);
+            // Gán cả hai để transform và thân vật lý không lệch nhau.
+            transform.rotation = next;
+            _rigidbody.rotation = next;
         }
 
         private void MoveStep(float deltaTime)

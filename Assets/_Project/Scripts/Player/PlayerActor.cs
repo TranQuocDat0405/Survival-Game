@@ -161,14 +161,28 @@ namespace Survival.Player
             OnDied?.Invoke();
         }
 
+        /// <summary>Bắn ra khi player được dựng lại cho ván mới. Animator nghe để đứng dậy khỏi tư thế chết.</summary>
+        public event Action OnReset;
+
         /// <summary>Dựng lại player về trạng thái đầu màn. Dùng cho nút Chơi lại.</summary>
         public void ResetToStart(Vector3 spawnPosition)
         {
             Stats.SetBase(_config.BaseStats);
             _health.Initialize(Stats);
+
             _motor.ControlLocked = false;
+            _motor.SetAimInput(Vector2.zero);
+            _motor.SetMoveInput(Vector2.zero);
             _motor.Teleport(spawnPosition, Quaternion.identity);
-            BuildSkills();
+
+            // ĐẶT LẠI các skill đang có, KHÔNG dựng đối tượng mới.
+            // Nút trên UI đã gắn với đúng những đối tượng này từ lúc khởi động;
+            // thay chúng bằng đối tượng mới sẽ khiến nút trỏ vào cái cũ đã bị vứt bỏ
+            // và cooldown trên màn hình đứng im vĩnh viễn.
+            for (int i = 0; i < _skills.Count; i++)
+                _skills[i].ResetState();
+
+            OnReset?.Invoke();
         }
     }
 }

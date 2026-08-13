@@ -100,6 +100,20 @@ namespace Survival.Skills
             return true;
         }
 
+        /// <summary>
+        /// Đưa skill về trạng thái đầu ván: hết hồi chiêu, đầy charge.
+        ///
+        /// Phải có hàm này thay vì dựng lại đối tượng runtime mới khi chơi lại.
+        /// Lý do: nút trên UI đã được gắn với ĐÚNG đối tượng này từ lúc khởi động.
+        /// Nếu chơi lại mà tạo đối tượng mới thì nút vẫn trỏ vào cái cũ đã bị vứt bỏ —
+        /// cái cũ không còn được đếm giờ nên cooldown trên màn hình đứng im vĩnh viễn,
+        /// trong khi skill thật thì vẫn chạy bình thường. Người chơi nhìn vào tưởng game hỏng.
+        /// </summary>
+        public virtual void ResetState()
+        {
+            CooldownTimer = 0f;
+        }
+
         protected abstract void Execute();
 
         protected void RaiseUsed() => OnUsed?.Invoke(this);

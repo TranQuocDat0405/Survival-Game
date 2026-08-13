@@ -19,8 +19,10 @@ MonoBehaviour:
   - EnemyPrefab: {fileID: 44615084259310853, guid: 7df821f1022a4904d8606c00352e750a, type: 3}
     MinCount: 1
     MaxCount: 2
-  _minSpawnRadius: 12
-  _maxSpawnRadius: 16
+  _minSpawnRadius: 14
+  _maxSearchRadius: 34
+  _arenaHalfExtent: 27
+  _spawnViewportMargin: 0.12
   _delayBetweenWaves: 2
-  _delayBeforeFirstWave: 1.5
+  _delayBeforeFirstWave: 2
   _extraEnemiesPerWave: 0

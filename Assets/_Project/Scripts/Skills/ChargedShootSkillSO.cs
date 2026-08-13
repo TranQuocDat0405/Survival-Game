@@ -129,6 +129,13 @@ namespace Survival.Skills
             }
         }
 
+        public override void ResetState()
+        {
+            base.ResetState();
+            _charges = _def.MaxCharges;   // chơi lại thì đầy charge như lúc mới vào màn
+            _regenTimer = 0f;
+        }
+
         public override void Tick(float deltaTime)
         {
             base.Tick(deltaTime);   // đếm lùi khoảng cách 0.5 giây giữa 2 phát bắn

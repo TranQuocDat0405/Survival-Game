@@ -22,7 +22,7 @@ MonoBehaviour:
   - 0
   - 15
   _damagePerProjectile: 10
-  _projectileSpeed: 18
-  _projectileRange: 12
+  _projectileSpeed: 24
+  _projectileRange: 16
   _maxCharges: 3
   _chargeRegenTime: 3

@@ -38,6 +38,7 @@ namespace Survival.Player
             if (_actor != null)
             {
                 _actor.OnSkillUsed += HandleSkillUsed;
+                _actor.OnReset += ResetToAlive;
 
                 if (_actor.Health != null)
                 {
@@ -53,6 +54,7 @@ namespace Survival.Player
                 return;
 
             _actor.OnSkillUsed -= HandleSkillUsed;
+            _actor.OnReset -= ResetToAlive;
 
             if (_actor.Health != null)
             {

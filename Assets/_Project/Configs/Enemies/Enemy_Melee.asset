@@ -24,8 +24,8 @@ MonoBehaviour:
     Value: 360
   - Type: 3
     Value: 0
-  _attackWindup: 0.35
-  _attackRecover: 0.25
+  _attackWindup: 0.5
+  _attackRecover: 0.4
   _idleAfterAttack: 1
   _trackTargetDuringWindup: 1
   _windupTrackingFactor: 0.5
