@@ -29,7 +29,26 @@ namespace Survival.Pooling
         /// <summary>Bản đồ prefab -> pool tương ứng. Khoá là instance ID của prefab để tra cứu nhanh.</summary>
         private readonly Dictionary<int, Pool> _pools = new Dictionary<int, Pool>();
 
+        [SerializeField, Tooltip(
+            "Nơi cất object đang ngủ trong pool, đặt xa hẳn khu vực chơi.\n\n" +
+            "BẮT BUỘC phải xa. Object trong pool bị tắt nhưng KHÔNG bị dời đi đâu cả — " +
+            "nếu để chúng nằm ở gốc toạ độ, tức là ngay chỗ player đứng, thì khoảnh khắc " +
+            "bật một con quái lên nó sẽ nằm CHỒNG LÊN player, và hệ vật lý đẩy văng player ra " +
+            "trước khi kịp dời con quái tới chỗ spawn thật.")]
+        private Vector3 _poolStoragePosition = new Vector3(0f, -500f, 0f);
+
         private Transform _root;
+
+        /// <summary>
+        /// Nơi cất object đang ngủ. Object tự dời về đây khi được trả lại pool.
+        ///
+        /// Framework gốc chỉ đổi cha chứ không dời vị trí, nên object trả về pool
+        /// nằm lại đúng chỗ nó vừa chết. Vô hại về mặt chạy game (object đã tắt),
+        /// nhưng lúc gỡ lỗi thì rất rối: nhìn Scene View thấy một đống quái nằm chồng lên player
+        /// mà không biết cái nào còn sống cái nào đã chết.
+        /// </summary>
+        public static Vector3 StoragePosition =>
+            IsSingletonAlive ? I._poolStoragePosition : new Vector3(0f, -500f, 0f);
 
         protected override void Awake()
         {
@@ -37,6 +56,7 @@ namespace Survival.Pooling
 
             _root = new GameObject("[Pools]").transform;
             _root.SetParent(transform);
+            _root.position = _poolStoragePosition;
 
             Prewarm();
         }
@@ -70,7 +90,16 @@ namespace Survival.Pooling
                 objectToPool: prefab,
                 maxPoolSize: maxPoolSize);
 
-            pool.transform.SetParent(_root);
+            // Tham số false ở đây là bắt buộc, không phải tuỳ chọn.
+            //
+            // Pool.CreatePool đã tạo sẵn các object con NGAY LÚC ĐÓ, tại gốc toạ độ,
+            // trước khi mình kịp đưa pool về kho chứa. Mà SetParent mặc định GIỮ NGUYÊN
+            // vị trí trong thế giới — nên nếu gọi SetParent(_root) không kèm tham số,
+            // pool sẽ nằm dưới kho về mặt cây phân cấp nhưng vẫn ĐỨNG YÊN ở gốc toạ độ,
+            // tức là đúng chỗ player. Truyền false thì pool nhảy hẳn về vị trí của kho
+            // và kéo theo toàn bộ object con.
+            pool.transform.SetParent(_root, false);
+            pool.transform.localPosition = Vector3.zero;
             pool.name = $"Pool_{prefab.name}";
             _pools[key] = pool;
             return pool;
@@ -95,10 +124,37 @@ namespace Survival.Pooling
             if (instance == null)
                 return null;
 
-            var t = instance.transform;
-            t.SetPositionAndRotation(position, rotation);
+            Teleport(instance.transform, position, rotation);
 
             return instance as T;
+        }
+
+        /// <summary>
+        /// Dời object tới chỗ mới một cách dứt khoát.
+        ///
+        /// Gán <c>transform.position</c> KHÔNG đủ cho object có Rigidbody:
+        ///   - Thân vật lý vẫn còn ở vị trí cũ cho tới bước vật lý kế tiếp, nên nó có thể
+        ///     va chạm ở chỗ cũ trước khi kịp nhận vị trí mới.
+        ///   - Rigidbody đang bật nội suy (Interpolate) sẽ VẼ đường đi mượt từ chỗ cũ sang chỗ mới,
+        ///     tạo ra cảnh con quái bay vụt ngang màn hình lúc vừa spawn.
+        ///   - Vận tốc còn sót lại từ lần dùng trước sẽ khiến nó trôi đi ngay khi vừa hiện ra.
+        /// Nên phải đặt cả vị trí của Rigidbody và xoá sạch vận tốc.
+        /// </summary>
+        private static void Teleport(Transform target, Vector3 position, Quaternion rotation)
+        {
+            target.SetPositionAndRotation(position, rotation);
+
+            if (!target.TryGetComponent<Rigidbody>(out var body))
+                return;
+
+            body.position = position;
+            body.rotation = rotation;
+
+            if (!body.isKinematic)
+            {
+                body.velocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
         }
 
         public T Spawn<T>(T prefab, Vector3 position) where T : PooledObject

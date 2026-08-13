@@ -285,6 +285,12 @@ namespace Survival.Enemies
             _stateMachine.IsRunning = false;
             StopMoving();
             EnemyRegistry.I?.Unregister(this);
+
+            // Dời hẳn về kho chứa. Object đã tắt nên không va chạm được nữa,
+            // nhưng để nó nằm lại giữa sân khiến Scene View đầy xác chồng lên nhau,
+            // rất khó nhìn khi cần gỡ lỗi.
+            transform.position = Pooling.PoolService.StoragePosition;
+            _rigidbody.position = transform.position;
         }
 
 #if UNITY_EDITOR

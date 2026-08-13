@@ -133,8 +133,11 @@ namespace Survival.UI
             if (_expFill != null)
                 _expFill.fillAmount = required > 0 ? Mathf.Clamp01((float)current / required) : 0f;
 
+            // Ghi rõ chữ "EXP" chứ không chỉ để hai con số. Một thanh màu xanh với "20 / 100"
+            // bên trong không tự nói được nó là kinh nghiệm hay là thứ gì khác —
+            // người chơi lần đầu nhìn vào sẽ không biết nó dùng để làm gì.
             if (_expText != null)
-                _expText.text = $"{current} / {required}";
+                _expText.text = $"EXP  {current} / {required}";
         }
     }
 }

@@ -61,6 +61,11 @@ namespace Survival.Player
             _rigidbody.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
             _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
             _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+            // Player nặng hơn quái rất nhiều để một đám 5-6 con vây quanh không xô đẩy được.
+            // Không khoá hẳn va chạm, vì vẫn cần quái bị chặn lại chứ không đi xuyên qua người;
+            // chỉ làm cho lực đẩy của chúng gần như không tác dụng lên player.
+            _rigidbody.mass = 100f;
         }
 
         public void Initialize(IStatProvider stats, bool moveAlongForwardOnly, float deadZone)
