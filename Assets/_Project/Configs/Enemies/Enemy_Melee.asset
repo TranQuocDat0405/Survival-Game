@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5b8dc32b99b59640a48ada04c82835c, type: 3}
+  m_Name: Enemy_Melee
+  m_EditorClassIdentifier: 
+  _displayName: "Qu\xE1i c\u1EADn chi\u1EBFn"
+  _visualPrefab: {fileID: 0}
+  _visualScale: 1
+  _baseStats:
+  - Type: 0
+    Value: 220
+  - Type: 1
+    Value: 3
+  - Type: 2
+    Value: 360
+  - Type: 3
+    Value: 0
+  _attackWindup: 0.35
+  _attackRecover: 0.25
+  _idleAfterAttack: 1
+  _trackTargetDuringWindup: 1
+  _windupTrackingFactor: 0.5
+  _attack:
+    rid: 4511735220291502081
+  _expReward: 30
+  references:
+    version: 2
+    RefIds:
+    - rid: 4511735220291502081
+      type: {class: ConeMeleeAttack, ns: Survival.Enemies.Attacks, asm: Assembly-CSharp}
+      data:
+        _range: 1.3
+        _coneAngle: 50
+        _damage: 30
+        _heightOffset: 0.8

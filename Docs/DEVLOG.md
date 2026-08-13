@@ -140,14 +140,64 @@
 
 #### Ghi chú kỹ thuật ngày 0
 
-**1. Không dùng Assembly Definition (asmdef).**
-`nframework` và DOTween không có asmdef → chúng nằm trong `Assembly-CSharp`. Unity **không cho phép** một asmdef tham chiếu tới `Assembly-CSharp`, nên nếu tạo asmdef cho code gameplay thì sẽ không dùng được `Pool`, `StateMachine`, `ObservableValue`, `UIManager`… của nframework. Tạo asmdef cho cả nframework + DOTween sẽ kéo theo một chuỗi phụ thuộc dễ vỡ, không đáng đánh đổi với deadline 4 ngày.
-→ **Giải pháp:** dùng **namespace** (`Survival.Combat`, `Survival.Enemies`, …) + cấu trúc thư mục để tổ chức code. Unit test EditMode sẽ đặt trong thư mục `Editor` để nằm trong `Assembly-CSharp-Editor` — assembly này *được phép* thấy `Assembly-CSharp`.
+**1. Không dùng Assembly Definition (asmdef) cho code gameplay.**
+
+> _Đính chính:_ ghi chú đầu tiên của tôi nói "nframework không có asmdef" — **sai**. nframework thực tế có `NFramework.Runtime.asmdef` (với `autoReferenced: true`, nên `Assembly-CSharp` dùng được nó bình thường). Kết luận không đổi, nhưng lý do thì khác:
+
+**DOTween không có asmdef** → nó nằm trong `Assembly-CSharp`. Unity **không cho phép** một asmdef tham chiếu ngược tới `Assembly-CSharp`. Nên nếu tạo asmdef cho code gameplay thì mất quyền dùng DOTween (dự định dùng cho damage popup, tween UI, feedback lên cấp).
+→ **Giải pháp:** dùng **namespace** (`Survival.Combat`, `Survival.Enemies`, …) + cấu trúc thư mục để tổ chức code. Unit test EditMode đặt trong thư mục `Editor` để nằm trong `Assembly-CSharp-Editor` — assembly này *được phép* thấy `Assembly-CSharp`.
+→ Nếu tới Ngày 4 việc này gây vướng, DOTween có sẵn nút tạo asmdef (Tools > Demigiant > DOTween Utility Panel) để chuyển sang phương án asmdef đầy đủ.
 
 **2. Rig & animation — đã xử lý một cái bẫy.**
 Bộ *"KayKit Character Animations 1.2"* dùng rig **PrototypePete** (6 xương, nhân vật không chân), **không tương thích** với KayKit Adventurers. Import theo bộ này ra **0 animation clip**.
 Animation đúng nằm trong chính pack Adventurers/Skeletons: `Animations/fbx/Rig_Medium/Rig_Medium_General.fbx` + `Rig_Medium_MovementBasic.fbx`.
 Đã verify: `Rogue_Hooded` và `Skeleton_Warrior` đều cho **Avatar Humanoid hợp lệ** → dùng chung một bộ clip qua retargeting.
 
-Clip hiện có: `Idle_A/B` `Walking_A/B/C` `Running_A/B` `Hit_A/B` `Death_A/B` `Throw` `Spawn_Air/Ground` `Interact` `PickUp` `Use_Item` `Jump_*`.
-**Còn thiếu: animation tấn công / bắn / né.** Cần tải thêm pack **KayKit – Character Animations** (bản mới, cho `Rig_Medium`): https://kaylousberg.itch.io/kaykit-character-animations — CC0, có Melee combat + Ranged combat (shooting/spellcasting) + Movement (dodge).
+Đã bổ sung pack **KayKit – Character Animations 1.1** (https://kaylousberg.itch.io/kaykit-character-animations, CC0). Bộ clip cuối cùng dùng cho game:
+
+| Vai trò | Clip | Độ dài |
+|---|---|---|
+| Player đứng yên | `Idle_A` | 1.07s (loop) |
+| Player chạy | `Running_HoldingBow` | 0.80s (loop) |
+| Player bắn | `Ranged_1H_Shoot` | 1.07s |
+| Player dash | `Dodge_Forward` | 0.40s |
+| Player ném bom | `Throw` | 1.37s |
+| Quái cận chiến chém | `Melee_1H_Attack_Slice_Diagonal` | 1.00s |
+| Quái tầm xa niệm chú | `Ranged_Magic_Shoot` | 0.93s |
+| Trúng đòn / chết | `Hit_A` / `Death_A` | 0.67s / 0.80s |
+
+---
+
+### 13/08/2026 — Ngày 1: Nền móng + Player + Quái cận chiến
+
+**Đã viết** (tất cả nằm trong `Assets/_Project/Scripts/`):
+
+| Nhóm | File | Vai trò |
+|---|---|---|
+| Stats | `EStatType`, `StatModifier`, `StatSet`, `IStatProvider` | Chỉ số lưu trong mảng float đánh chỉ số bằng enum (tránh boxing của Dictionary) |
+| Combat | `CombatMath`, `DamageInfo`, `IDamageable`, `Health` | Một cửa duy nhất trừ máu, luôn qua công thức spec |
+| Pooling | `PoolService`, `PoolConfigSO` | Bọc `NFramework.Pool`, tra cứu theo prefab, prewarm |
+| Player | `PlayerActor`, `PlayerMotor`, `PlayerInputRouter`, `KeyboardSkillInput` | Xoay đúng 180°/s bằng `Quaternion.RotateTowards` |
+| Skills | `SkillDefinition`, `SkillRuntime`, `SkillContext`, `ChargedShootSkillSO` | Đủ 6 luật mục 3.1 |
+| Projectiles | `ProjectileBase`, `IProjectileEffect` | `SphereCastNonAlloc` quét giữa 2 khung hình, chống đạn xuyên |
+| Enemies | `EnemyActor`, `EnemyRegistry`, `EnemyConfigSO`, `ConeMeleeAttack`, 3 state | AI dùng `NFramework.StateMachine` |
+
+**Kết quả đo được khi chạy thật (Play mode):**
+
+| Kiểm chứng | Kết quả |
+|---|---|
+| Chỉ số player nạp từ config | 500 / 2 / 180 / 0 / 0 — đúng spec |
+| Chỉ số quái nạp từ config | 220 / 3 / 360 / 0 — đúng spec |
+| Một loạt bắn ra mấy viên | **3 viên**, góc đo được **−15.0° / 0.0° / +15.0°** |
+| Charge sau 1 phát | 3 → 2 |
+| Bắn phát 2 ngay lập tức | **Bị chặn**, và **không bị trừ oan charge** |
+| Mũi tên trúng bia | trừ đúng **10** máu (10 × (1+0) − 0 giáp) |
+| Quái đánh player 9 đòn liên tiếp | mất đúng **270** máu = 9 × 30 |
+| Số mũi tên để giết quái | **22** viên = 220 ÷ 10 |
+| Sự kiện `OnEnemyDied` / `OnAllEnemiesCleared` | Đều bắn đúng → hệ thống wave nối vào được |
+
+**Lỗi tìm được và đã sửa trong ngày:**
+1. `SkillRuntime.TryUse` không tự bắt đầu cooldown → skill con viết thiếu một dòng sẽ chạy bình thường nhưng **không hồi chiêu**, không crash, không cảnh báo. Đã chuyển lên lớp cha.
+2. Thanh máu sẽ vẽ sai sau khi lên cấp vì máu tối đa đổi mà máu hiện tại thì không → thêm `IStatProvider.OnStatChanged` và `Health.OnMaxChanged`.
+3. `PlayerConfigSO` / `EnemyConfigSO` chưa kiểm tra thiếu chỉ số → xoá nhầm một dòng làm `MoveSpeed` về 0 (nhân vật đứng im) mà không báo gì. Đã thêm `OnValidate`.
+4. `Health` sinh ra với 0 máu và `IsAlive = false` nếu không ai gọi `Initialize` → mọi đòn đánh vào nó bị bỏ qua âm thầm. Đã thêm tự khởi tạo trong `Awake`.
