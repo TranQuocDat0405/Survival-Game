@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Skill_Dash
   m_EditorClassIdentifier: 
   _displayName: Dash
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: dbc03d21a8bc19548ad11805d96ad0ba, type: 3}
   _cooldown: 6
   _animationTrigger: Dash
   _distance: 3
