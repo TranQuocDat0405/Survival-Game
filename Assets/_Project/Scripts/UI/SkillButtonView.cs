@@ -39,10 +39,44 @@ namespace Survival.UI
         private SkillRuntime _skill;
         private System.Action _onPressed;
 
+        [SerializeField, Tooltip("Nền tròn của nút. SkillBarView đổi màu nút chính qua đây.")]
+        private Image _backgroundImage;
+
+        [SerializeField, Tooltip("Vòng viền ngoài. Tỉ lệ so với kích thước nút.")]
+        private RectTransform _chargeRingRect;
+
+        [SerializeField, Range(1f, 2f), Tooltip("Vòng charge lớn hơn nút bao nhiêu lần.")]
+        private float _chargeRingScale = 1.15f;
+
         private Color _defaultTint = Color.white;
         private bool _lastCanUse = true;
         private int _lastCharges = int.MinValue;
         private int _lastWholeSecondsLeft = int.MinValue;
+
+        /// <summary>
+        /// Đặt kích thước và màu nền cho nút. <see cref="SkillBarView"/> gọi hàm này
+        /// để nút đánh thường to hơn hẳn các nút bổ trợ.
+        ///
+        /// Kích thước không được đặt cứng trong prefab vì cùng MỘT prefab được dùng cho
+        /// cả nút chính lẫn nút phụ — khác nhau chỉ ở lúc dựng.
+        /// </summary>
+        public void ApplyStyle(float size, Color backgroundColor, float iconRatio)
+        {
+            var rect = (RectTransform)transform;
+            rect.sizeDelta = new Vector2(size, size);
+
+            if (_backgroundImage != null)
+                _backgroundImage.color = backgroundColor;
+
+            if (_iconImage != null)
+                ((RectTransform)_iconImage.transform).sizeDelta = Vector2.one * (size * iconRatio);
+
+            if (_chargeRingRect != null)
+                _chargeRingRect.sizeDelta = Vector2.one * (size * _chargeRingScale);
+
+            if (_cooldownText != null)
+                _cooldownText.fontSize = size * 0.34f;
+        }
 
         public void Bind(SkillRuntime skill, System.Action onPressed)
         {
@@ -113,11 +147,15 @@ namespace Survival.UI
             if (_cooldownText != null)
             {
                 float remaining = _skill.CooldownRemaining;
-                int whole = Mathf.CeilToInt(remaining);
+
+                // Chỉ hiện số khi cooldown còn từ 1 giây trở lên.
+                // Skill bắn có cooldown 0.5 giây — hiện số ở đó thì nút sẽ nhấp nháy chữ "1"
+                // mỗi lần bắn, gây rối mắt mà không cho thêm thông tin gì.
+                int whole = remaining >= 1f ? Mathf.CeilToInt(remaining) : 0;
                 if (force || whole != _lastWholeSecondsLeft)
                 {
                     _lastWholeSecondsLeft = whole;
-                    _cooldownText.text = remaining > 0.05f ? whole.ToString() : string.Empty;
+                    _cooldownText.text = whole > 0 ? whole.ToString() : string.Empty;
                 }
             }
 
@@ -131,10 +169,11 @@ namespace Survival.UI
                     _chargeText.text = charges.ToString();
                 }
 
-                // Vòng charge cập nhật mỗi khung hình vì đoạn đang hồi phải sáng dần lên mượt.
-                // Bên trong nó cũng chỉ ghi màu khi màu thật sự đổi.
+                // Vòng dùng ChargeProgress (đồng hồ 3 giây), KHÔNG dùng normalized (đồng hồ 0.5 giây).
+                // Cập nhật mỗi khung hình để đoạn đang hồi sáng dần lên mượt;
+                // bên trong nó cũng chỉ ghi màu khi màu thật sự đổi.
                 if (_chargeRing != null)
-                    _chargeRing.SetCharges(charges, charges >= _skill.MaxCharges ? 1f : normalized);
+                    _chargeRing.SetCharges(charges, _skill.ChargeProgress);
             }
         }
     }

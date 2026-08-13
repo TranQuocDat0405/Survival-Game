@@ -52,6 +52,19 @@ namespace Survival.Skills
 
         public virtual int MaxCharges => -1;
 
+        /// <summary>
+        /// Tiến độ hồi charge kế tiếp, từ 0 tới 1. Bằng 1 khi đã đầy charge.
+        ///
+        /// Đây là một đồng hồ HOÀN TOÀN KHÁC với cooldown ở trên, và việc tách rời hai thứ này
+        /// là bắt buộc chứ không phải cho đẹp. Với skill bắn của spec:
+        ///   - cooldown  = 0.5 giây, trả lời "bao giờ được bấm phát nữa"
+        ///   - hồi charge = 3 giây, trả lời "bao giờ có thêm một viên để bắn"
+        /// Nếu vẽ lớp phủ tối của nút theo đồng hồ 3 giây, người chơi sẽ thấy nút tối sầm
+        /// và tưởng chưa bấm được, trong khi thật ra 0.5 giây sau đã bắn tiếp được rồi
+        /// (miễn là còn charge). Giao diện khi đó nói sai về chính luật chơi.
+        /// </summary>
+        public virtual float ChargeProgress => 1f;
+
         public virtual bool CanUse => CooldownTimer <= 0f;
 
         /// <summary>Gọi mỗi khung hình để đếm lùi cooldown, hồi charge, chạy hiệu ứng đang diễn ra.</summary>

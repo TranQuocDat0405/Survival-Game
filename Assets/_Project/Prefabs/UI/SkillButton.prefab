@@ -329,6 +329,9 @@ MonoBehaviour:
   _chargeText: {fileID: 3830273042223416397}
   _chargeRing: {fileID: 2809159606893348840}
   _disabledTint: {r: 0.45, g: 0.45, b: 0.45, a: 1}
+  _backgroundImage: {fileID: 5058832890944859705}
+  _chargeRingRect: {fileID: 621350738046336040}
+  _chargeRingScale: 1.15
 --- !u!1 &6363280645553995629
 GameObject:
   m_ObjectHideFlags: 0

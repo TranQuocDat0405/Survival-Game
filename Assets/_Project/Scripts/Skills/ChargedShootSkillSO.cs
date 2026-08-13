@@ -101,29 +101,20 @@ namespace Survival.Skills
         public override bool CanUse => base.CanUse && _charges > 0;
 
         /// <summary>
-        /// Nút bắn hiển thị tiến độ hồi charge chứ không phải cooldown 0.5 giây —
-        /// vì 0.5 giây trôi qua quá nhanh để mắt kịp thấy, còn cái người chơi thực sự
-        /// cần biết là "bao giờ mới có thêm charge".
-        /// Khi charge đã đầy thì nút hiện đầy luôn.
+        /// Tiến độ hồi charge kế tiếp. Cái này điều khiển VÒNG CHIA ĐOẠN quanh nút,
+        /// KHÔNG điều khiển lớp phủ tối của nút.
+        ///
+        /// Còn <see cref="SkillRuntime.CooldownNormalized"/> thì giữ nguyên cách tính của lớp cha,
+        /// tức là theo đồng hồ 0.5 giây — đúng thứ trả lời câu hỏi "bấm được chưa".
+        /// Hai đồng hồ, hai chỗ hiển thị riêng, không được trộn vào nhau.
         /// </summary>
-        public override float CooldownNormalized
+        public override float ChargeProgress
         {
             get
             {
                 if (_charges >= _def.MaxCharges)
                     return 1f;
                 return Mathf.Clamp01(_regenTimer / _def.ChargeRegenTime);
-            }
-        }
-
-        /// <summary>Số giây còn lại tới charge kế tiếp. Bằng 0 khi đã đầy charge.</summary>
-        public override float CooldownRemaining
-        {
-            get
-            {
-                if (_charges >= _def.MaxCharges)
-                    return 0f;
-                return Mathf.Max(0f, _def.ChargeRegenTime - _regenTimer);
             }
         }
 
