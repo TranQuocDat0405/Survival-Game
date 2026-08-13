@@ -156,24 +156,31 @@ namespace Survival.Waves
         }
 
         /// <summary>
-        /// Chọn một điểm trên vành khuyên quanh player.
+        /// Chọn chỗ sinh quái quanh player, luôn nằm ngoài khung hình.
         ///
         /// Spawn quanh player chứ không phải ở mấy điểm cố định: người chơi di chuyển liên tục,
         /// điểm cố định sẽ khiến quái sinh ra ở tận đầu kia bản đồ và mất cả chục giây mới tới nơi.
+        ///
+        /// Camera được lấy một lần rồi nhớ lại: <c>Camera.main</c> thực chất là một phép
+        /// tìm object theo tag, gọi cho từng con quái ở mỗi wave là lãng phí không cần thiết.
         /// </summary>
         private Vector3 PickSpawnPosition()
         {
             var player = Player.PlayerActor.Current;
             Vector3 center = player != null ? player.transform.position : Vector3.zero;
 
-            float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
-            float radius = UnityEngine.Random.Range(_config.MinSpawnRadius, _config.MaxSpawnRadius);
+            if (_camera == null)
+                _camera = Camera.main;
 
-            var offset = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
-            var position = center + offset;
-            position.y = 0f;
-
-            return position;
+            return SpawnPointPicker.Pick(
+                center,
+                _config.MinSpawnRadius,
+                _config.MaxSearchRadius,
+                _config.ArenaHalfExtent,
+                _camera,
+                _config.SpawnViewportMargin);
         }
+
+        private Camera _camera;
     }
 }

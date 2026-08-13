@@ -35,12 +35,23 @@ namespace Survival.Config
 
         [Header("Vị trí spawn")]
         [SerializeField, Min(1f), Tooltip(
-            "Bán kính tối thiểu tính từ player. Phải đủ lớn để quái không hiện ra ngay trước mặt " +
-            "người chơi — vừa gây bất ngờ khó chịu, vừa khiến người chơi ăn đòn mà không kịp phản ứng.")]
-        private float _minSpawnRadius = 12f;
+            "Khoảng cách gần nhất được phép sinh quái, tính từ player.\n" +
+            "Quái không bao giờ sinh gần hơn khoảng này, kể cả khi chỗ đó đã khuất camera.")]
+        private float _minSpawnRadius = 10f;
 
-        [SerializeField, Min(1f), Tooltip("Bán kính tối đa tính từ player.")]
-        private float _maxSpawnRadius = 16f;
+        [SerializeField, Min(1f), Tooltip(
+            "Dò ra xa nhất tới đây để tìm chỗ khuất camera. Cần lớn hơn tầm nhìn xa nhất " +
+            "của camera về phía trước, nếu không thì hướng phía trước sẽ không bao giờ tìm được chỗ hợp lệ.")]
+        private float _maxSearchRadius = 34f;
+
+        [SerializeField, Min(1f), Tooltip("Nửa cạnh sân đấu. Điểm sinh bị kẹp vào trong để quái không kẹt ngoài tường.")]
+        private float _arenaHalfExtent = 27f;
+
+        [SerializeField, Range(0f, 0.5f), Tooltip(
+            "Phải ra ngoài mép màn hình thêm bao nhiêu phần thì mới tính là khuất.\n" +
+            "0.12 nghĩa là cách mép 12% chiều màn hình — để quái không hiện ra sát rìa " +
+            "rồi lập tức trôi vào tầm nhìn ngay khung hình sau.")]
+        private float _spawnViewportMargin = 0.12f;
 
         [Header("Nhịp độ")]
         [SerializeField, Min(0f), Tooltip("Chờ bao lâu sau khi clear sạch wave rồi mới spawn wave kế.")]
@@ -57,7 +68,9 @@ namespace Survival.Config
 
         public IReadOnlyList<SpawnEntry> Entries => _entries;
         public float MinSpawnRadius => _minSpawnRadius;
-        public float MaxSpawnRadius => _maxSpawnRadius;
+        public float MaxSearchRadius => _maxSearchRadius;
+        public float ArenaHalfExtent => _arenaHalfExtent;
+        public float SpawnViewportMargin => _spawnViewportMargin;
         public float DelayBetweenWaves => _delayBetweenWaves;
         public float DelayBeforeFirstWave => _delayBeforeFirstWave;
         public int ExtraEnemiesPerWave => _extraEnemiesPerWave;
@@ -65,8 +78,8 @@ namespace Survival.Config
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            if (_maxSpawnRadius < _minSpawnRadius)
-                _maxSpawnRadius = _minSpawnRadius;
+            if (_maxSearchRadius < _minSpawnRadius)
+                _maxSearchRadius = _minSpawnRadius;
 
             for (int i = 0; i < _entries.Count; i++)
             {
