@@ -132,6 +132,7 @@ namespace Survival.EditorTools
             // Xoá bộ nhớ đệm chiều cao: sau khi đổi thiết lập nhập model thì cỡ thật đổi theo,
             // giữ lại số cũ sẽ tính ra hệ số sai mà không hề có dấu hiệu gì.
             NaturalHeightCache.Clear();
+            NaturalWidthCache.Clear();
 
             // Tiền tố phải khớp CHÍNH XÁC tên file. Trước đây lọc "PineTree_" trong khi
             // file thật tên là "Pine_", nên toàn bộ 5 cây thông bị bỏ sót mà không có
@@ -418,7 +419,7 @@ namespace Survival.EditorTools
             var control = Vector3.Lerp(start, end, 0.5f)
                 + new Vector3(Random.Range(-4f, 4f), 0f, Random.Range(-4f, 4f));
 
-            const int steps = 170;
+            const int steps = 58;
             for (int i = 0; i <= steps; i++)
             {
                 float t = i / (float)steps;
@@ -434,15 +435,24 @@ namespace Survival.EditorTools
                 var tangent = (b - a).normalized;
                 var side = Vector3.Cross(Vector3.up, tangent);
 
-                // Lát NHIỀU viên ngang mặt đường chứ không phải một viên.
+                // Lát vài viên NGANG mặt đường chứ không phải một viên.
+                // Một hàng đá đơn nhìn ra chỉ là chuỗi sỏi rơi vãi; phải rộng cỡ hai bước chân
+                // thì mắt mới đọc thành lối mòn có người đi.
                 //
-                // Một hàng đá đơn nhìn ra chỉ là chuỗi sỏi rơi vãi. Con đường chỉ đọc được
-                // khi nó đủ rộng cỡ hai bước chân — lúc đó mắt mới hiểu là chỗ này có người đi qua.
-                // Đây chính là thứ tạo khác biệt giữa "bãi cỏ có rải đá" và "khu rừng có lối mòn".
-                int across = Random.Range(2, 5);
-                for (int k = 0; k < across; k++)
+                // Nhưng vị trí ngang KHÔNG được bốc ngẫu nhiên trong cả dải.
+                // Bốc ngẫu nhiên thì hai viên rơi trúng gần nhau và chồng lên nhau,
+                // nhìn kỹ ra ngay là một đống đá lộn xộn chứ không phải mặt đường được lát.
+                // Thay vào đó chia dải thành các RÃNH CÁCH ĐỀU, mỗi rãnh một viên,
+                // rồi rung nhẹ quanh rãnh — vẫn tự nhiên mà không bao giờ đè nhau.
+                const int lanes = 3;
+                for (int k = 0; k < lanes; k++)
                 {
-                    var spot = point + side * Random.Range(-1.0f, 1.0f);
+                    // Bỏ bớt ngẫu nhiên để mặt đường thưa và mòn, chứ không lát kín như sân gạch.
+                    if (Random.value < 0.28f)
+                        continue;
+
+                    float laneOffset = Mathf.Lerp(-0.85f, 0.85f, k / (float)(lanes - 1));
+                    var spot = point + side * (laneOffset + Random.Range(-0.10f, 0.10f));
 
                     var prefab = pool[Random.Range(0, pool.Count)];
                     var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
@@ -451,7 +461,8 @@ namespace Survival.EditorTools
 
                     instance.transform.position = spot;
                     instance.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-                    ScaleToHeight(instance, prefab, 0.05f, 0.10f);
+                    // Rãnh cách nhau 0.85 nên bề ngang phải nhỏ hơn mức đó thì mới không đè nhau.
+                    ScaleToWidth(instance, prefab, 0.40f, 0.72f);
                     AlignToGround(instance, sink: 0f);
 
                     // Lún nhẹ xuống đất để viên đá trông như đã nằm đó lâu ngày,
@@ -607,6 +618,62 @@ namespace Survival.EditorTools
 
             instance.transform.position += Vector3.up * (-bounds.min.y - sink);
         }
+
+        /// <summary>
+        /// Đổi kích thước theo BỀ NGANG mong muốn thay vì chiều cao.
+        ///
+        /// Dùng cho đá lát đường. Với một phiến đá nằm bẹt thì chiều cao gần như vô nghĩa —
+        /// mọi viên đều dày cỡ 0.05 tới 0.10 — còn thứ quyết định nó chiếm bao nhiêu mặt đường
+        /// lại là bề ngang. Co giãn theo chiều cao ở đây cho ra kết quả loạn hẳn:
+        /// đo được trong pool có viên rộng 0.43 và có phiến rộng tới 2.27, chênh nhau năm lần,
+        /// nên phiến to đè lên cả hai viên bên cạnh dù rãnh đã cách đều.
+        /// </summary>
+        private static void ScaleToWidth(GameObject instance, GameObject prefab, float minWidth, float maxWidth)
+        {
+            float natural = GetNaturalWidth(prefab);
+
+            Vector3 nativeScale = prefab.transform.localScale;
+            if (nativeScale.sqrMagnitude < 0.000001f)
+                nativeScale = Vector3.one;
+
+            float factor = natural > 0.0001f
+                ? Random.Range(minWidth, maxWidth) / natural
+                : 1f;
+
+            instance.transform.localScale = nativeScale * factor;
+        }
+
+        /// <summary>Bề ngang thật của model khi đặt vào cảnh, lấy cạnh dài hơn trong hai chiều ngang.</summary>
+        private static float GetNaturalWidth(GameObject prefab)
+        {
+            if (NaturalWidthCache.TryGetValue(prefab, out float cached))
+                return cached;
+
+            float width = 0f;
+
+            foreach (var filter in prefab.GetComponentsInChildren<MeshFilter>())
+            {
+                if (filter.sharedMesh == null)
+                    continue;
+
+                float chainX = 1f, chainZ = 1f;
+                var node = filter.transform;
+                while (node != null)
+                {
+                    chainX *= node.localScale.x;
+                    chainZ *= node.localScale.z;
+                    node = node.parent;
+                }
+
+                var size = filter.sharedMesh.bounds.size;
+                width = Mathf.Max(width, Mathf.Max(size.x * chainX, size.z * chainZ));
+            }
+
+            NaturalWidthCache[prefab] = width;
+            return width;
+        }
+
+        private static readonly Dictionary<GameObject, float> NaturalWidthCache = new Dictionary<GameObject, float>();
 
         /// <summary>
         /// Chiều cao thật của model khi đặt vào cảnh, tính bằng unit.
