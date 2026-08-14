@@ -151,12 +151,27 @@ namespace Survival.EditorTools
 
             // Bộ RockPath_ là một BỘ KIT LÁT ĐƯỜNG chứ không phải mười viên đá rời.
             // Tác giả cố tình làm phiến to (Wide 2.27, Thin 1.44) để lát nền, và viên nhỏ
-            // (Small 0.43-0.57) để chèn khe. Trước đây tôi ép tất cả về cùng một cỡ 0.6,
-            // tức là vứt bỏ đúng cái làm nên vẻ đẹp của bộ kit — mặt đường thành ra
-            // một lưới ô vuông đều tăm tắp, nhìn cứng ngắc.
-            var pathSlabs = LoadAll("RockPath_Round_Wide", "RockPath_Round_Thin",
-                                    "RockPath_Square_Wide", "RockPath_Square_Thin");
-            var pathPebbles = LoadAll("RockPath_Round_Small", "RockPath_Square_Small");
+            // (Small 0.43-0.57) để chèn khe.
+            //
+            // ĐÁ TRÒN NHIỀU GẤP BỐN LẦN ĐÁ VUÔNG. Nạp đều tay hai loại thì ra 50/50, nhưng
+            // đá vuông "nặng ký" hơn hẳn về mặt thị giác: nó đọc ra ngay là gạch do người cắt,
+            // nên chỉ cần một nửa là cả con đường trông nhân tạo. Càng tệ hơn vì lớp nền được
+            // xoay xuôi theo hướng đường — phiến vuông xoay xuôi thì xếp thành hàng lối ngay ngắn,
+            // còn phiến tròn thì không bao giờ bị vậy.
+            // Giữ lại một ít đá vuông là có chủ ý: nó gợi ra rằng con đường có người lát,
+            // chỉ là không được nhiều tới mức thành sân gạch.
+            var pathSlabs = new List<GameObject>();
+            AddRepeated(pathSlabs, LoadAll("RockPath_Round_Wide", "RockPath_Round_Thin"), 4);
+            AddRepeated(pathSlabs, LoadAll("RockPath_Square_Wide", "RockPath_Square_Thin"), 1);
+
+            // Lớp chèn khe và lớp mép trộn thêm đá KHÔNG thuộc bộ kit lát: sỏi tự nhiên và
+            // đá phủ rêu. Chúng khác hẳn về hình dạng lẫn màu nên mặt đường đa dạng hẳn lên,
+            // và đá rêu làm nhiệm vụ nối con đường với thảm cỏ xung quanh cho đỡ tách biệt.
+            var pathPebbles = new List<GameObject>();
+            AddRepeated(pathPebbles, LoadAll("RockPath_Round_Small"), 4);
+            AddRepeated(pathPebbles, LoadAll("RockPath_Square_Small"), 1);
+            AddRepeated(pathPebbles, LoadAll("Pebble_Round"), 3);
+            AddRepeated(pathPebbles, LoadAll("Rock_Moss_"), 1);
             var logs = LoadAll("WoodLog", "TreeStump");
             var mossyRocks = LoadAll("Rock_Moss_");
             var berryBushes = LoadAll("BushBerries_");
@@ -341,6 +356,19 @@ namespace Survival.EditorTools
         }
 
         // ============================================================ CÁC KIỂU RẢI
+
+        /// <summary>
+        /// Thêm một nhóm model vào danh sách, lặp lại nhiều lần để tăng tỉ lệ được bốc trúng.
+        ///
+        /// Bốc ngẫu nhiên đều tay trên một danh sách đã nhân bản CHÍNH LÀ bốc có trọng số,
+        /// mà không cần thêm cấu trúc dữ liệu hay phép tính xác suất nào. Nhìn vào lời gọi là
+        /// đọc ra ngay tỉ lệ: nhân 4 với đá tròn và nhân 1 với đá vuông nghĩa là 80% so với 20%.
+        /// </summary>
+        private static void AddRepeated(List<GameObject> target, List<GameObject> source, int times)
+        {
+            for (int i = 0; i < times; i++)
+                target.AddRange(source);
+        }
 
         private static List<GameObject> LoadAll(params string[] prefixes)
         {
