@@ -21,6 +21,7 @@ namespace Survival.Player
         private static readonly int LocomotionSpeedHash = Animator.StringToHash("LocomotionSpeed");
         private static readonly int DeadHash = Animator.StringToHash("Dead");
         private static readonly int HitHash = Animator.StringToHash("Hit");
+        private static readonly int DashingHash = Animator.StringToHash("Dashing");
 
         [SerializeField] private Animator _animator;
         [SerializeField] private PlayerActor _actor;
@@ -91,6 +92,15 @@ namespace Survival.Player
 
             _animator.SetFloat(SpeedHash, _displayedSpeed);
             _animator.SetFloat(LocomotionSpeedHash, ComputeStepRate());
+
+            // Báo cho Animator biết CÚ LƯỚT ĐANG DIỄN RA HAY ĐÃ XONG, để nó thoát khỏi trạng
+            // thái lướt đúng lúc thay vì đoán theo thời lượng clip.
+            //
+            // Điều khiển bị khoá chính là dấu hiệu của cú lướt: lúc đó joystick mất quyền và
+            // kỹ năng lướt tự lo việc đẩy nhân vật đi. Kèm điều kiện còn sống, vì lúc chết
+            // điều khiển cũng bị khoá nhưng đó không phải đang lướt.
+            bool dashing = _motor.ControlLocked && (_actor == null || _actor.Health == null || _actor.Health.IsAlive);
+            _animator.SetBool(DashingHash, dashing);
         }
 
         /// <summary>
@@ -131,8 +141,21 @@ namespace Survival.Player
             if (string.IsNullOrEmpty(trigger))
                 return;
 
+            // Xoá các trigger kỹ năng còn tồn đọng trước khi bật cái mới.
+            //
+            // Trigger trong Unity KHÔNG tự mất đi: nếu bật lên đúng lúc máy trạng thái đang bận
+            // (đang trúng đòn chẳng hạn) mà không đường chuyển nào tiêu thụ nó, nó nằm chờ đó
+            // và sẽ kích hoạt ở một thời điểm hoàn toàn bất ngờ sau này.
+            // Đó là kiểu lỗi "tự nhiên nhân vật lăn một cái giữa lúc đang chạy" — rất khó lần ra
+            // vì lúc nó xảy ra thì người chơi chẳng bấm gì cả.
+            for (int i = 0; i < SkillTriggers.Length; i++)
+                _animator.ResetTrigger(SkillTriggers[i]);
+
             _animator.SetTrigger(trigger);
         }
+
+        /// <summary>Toàn bộ trigger kỹ năng, dùng để dọn sạch trước khi bật cái mới.</summary>
+        private static readonly string[] SkillTriggers = { "Shoot", "Dash", "Throw" };
 
         private void HandleDamaged(Health target, float appliedDamage, in DamageInfo info)
         {

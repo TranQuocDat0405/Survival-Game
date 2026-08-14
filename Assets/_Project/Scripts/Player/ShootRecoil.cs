@@ -38,16 +38,24 @@ namespace Survival.Player
 
         [Header("Độ mạnh")]
         [SerializeField, Min(0f), Tooltip("Cây nỏ lùi bao xa, tính bằng unit.")]
-        private float _weaponKickBack = 0.16f;
+        private float _weaponKickBack = 0.34f;
 
         [SerializeField, Min(0f), Tooltip("Cây nỏ ngóc nòng lên bao nhiêu độ. Cú giật thật luôn hất nòng lên chứ không chỉ lùi thẳng.")]
-        private float _weaponKickUp = 12f;
+        private float _weaponKickUp = 26f;
 
         [SerializeField, Min(0f), Tooltip("Thân người nhích lùi bao xa. Phải NHỎ HƠN hẳn cây nỏ, vì người nặng hơn nhiều.")]
-        private float _bodyKickBack = 0.05f;
+        private float _bodyKickBack = 0.12f;
+
+        [SerializeField, Min(0f), Tooltip(
+            "Thân người NGẢ RA SAU bao nhiêu độ.\n\n" +
+            "Đây là phần quan trọng nhất khi vừa chạy vừa bắn. Lúc đang chạy, nhân vật đã trôi đi " +
+            "liên tục nên một cú nhích lùi vài phần trăm unit chìm nghỉm trong chuyển động đó — " +
+            "người chơi không thấy gì cả. Còn góc ngả thì không phụ thuộc vào việc đang đứng hay " +
+            "đang chạy, nên nó luôn đọc ra được.")]
+        private float _bodyLeanBack = 9f;
 
         [SerializeField, Min(0.01f), Tooltip("Hồi hết cú giật mất bao lâu, tính bằng giây.")]
-        private float _recoverDuration = 0.18f;
+        private float _recoverDuration = 0.22f;
 
         /// <summary>Từ 1 (vừa bắn) về 0 (đã hồi xong).</summary>
         private float _kick;
@@ -55,6 +63,7 @@ namespace Survival.Player
         private Vector3 _weaponRest;
         private Vector3 _visualRest;
         private Quaternion _weaponRestRotation;
+        private Quaternion _visualRestRotation;
 
         private void Awake()
         {
@@ -67,7 +76,10 @@ namespace Survival.Player
                 _weaponRestRotation = _weaponHolder.localRotation;
             }
             if (_visualRoot != null)
+            {
                 _visualRest = _visualRoot.localPosition;
+                _visualRestRotation = _visualRoot.localRotation;
+            }
         }
 
         private void OnEnable()
@@ -112,7 +124,10 @@ namespace Survival.Player
             }
 
             if (_visualRoot != null)
+            {
                 _visualRoot.localPosition = _visualRest + Vector3.back * (_bodyKickBack * _kick);
+                _visualRoot.localRotation = _visualRestRotation * Quaternion.Euler(-_bodyLeanBack * _kick, 0f, 0f);
+            }
 
             // Hết cú giật thì trả mọi thứ về đúng vị trí gốc, tránh sai số cộng dồn
             // qua hàng nghìn phát bắn khiến vũ khí trôi dần khỏi chỗ cũ.
@@ -124,7 +139,10 @@ namespace Survival.Player
                     _weaponHolder.localRotation = _weaponRestRotation;
                 }
                 if (_visualRoot != null)
+                {
                     _visualRoot.localPosition = _visualRest;
+                    _visualRoot.localRotation = _visualRestRotation;
+                }
             }
         }
     }

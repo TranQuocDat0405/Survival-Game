@@ -144,6 +144,16 @@ namespace Survival.EditorTools
             controller.AddParameter("Dash", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Throw", AnimatorControllerParameterType.Trigger);
 
+            // Cờ báo "đang lướt". Dùng để thoát khỏi trạng thái lướt ĐÚNG LÚC cú lướt kết thúc,
+            // thay vì đoán theo thời lượng clip.
+            //
+            // Vì sao cần: clip Dodge_Forward dài 0.40 giây còn cú lướt theo spec kéo 0.50 giây.
+            // Trước đây trạng thái thoát ra theo tỉ lệ clip (85% của 0.40 tức 0.34 giây), nên có
+            // một khoảng nhân vật VẪN đang bị đẩy đi mà Animator đã về tư thế đứng — nhìn ra
+            // thành trượt băng. Cứ chỉnh thời lượng dash trên config là lệch lại, nên buộc phải
+            // đồng bộ theo trạng thái thật chứ không theo con số.
+            controller.AddParameter("Dashing", AnimatorControllerParameterType.Bool);
+
             // BẬT IK PASS — bắt buộc, nếu không Unity KHÔNG BAO GIỜ gọi OnAnimatorIK.
             //
             // Đây là thứ dùng để ép bàn tay trái nắm vào báng nỏ (xem WeaponTwoHandIK).
@@ -168,8 +178,22 @@ namespace Survival.EditorTools
             // Bộ KayKit vốn có sẵn nhóm Ranged_2H_* làm riêng cho nỏ: hai tay ôm nỏ đưa
             // thẳng ra trước, và clip bắn đã có sẵn cú giật lùi. Dùng đúng bộ đó thì tư thế
             // khớp với vũ khí mà không phải chỉnh gì thêm.
+            // DÙNG Ranged_2H_Shooting LÀM TƯ THẾ ĐỨNG, KHÔNG PHẢI Ranged_2H_Aiming.
+            //
+            // Tên nghe thì Aiming mới là tư thế đứng ngắm, nhưng đo ra mới biết nó là clip
+            // CHUYỂN TIẾP: 0.3 giây đầu vung người vào tư thế ngắm, rồi giữ nguyên 1.3 giây.
+            // Đặt lặp một clip như vậy thì cứ mỗi 1.6 giây nó giật ngược về tư thế ban đầu
+            // rồi vung lại — người chơi thấy thân nhân vật giật đều đặn theo nhịp.
+            //
+            // Đo chỗ nối vòng lặp (so tư thế đầu clip với cuối clip):
+            //   Ranged_2H_Aiming    ngực lệch 77.3 độ  -> giật mạnh
+            //   Ranged_2H_Shooting  ngực lệch  0.0 độ  -> lặp sạch
+            // Cùng bộ hai tay nên tư thế gần như nhau, chỉ khác là clip này lặp được.
+            //
+            // BÀI HỌC: trước khi dùng một clip để LẶP, phải kiểm tra tư thế đầu và cuối có
+            // trùng nhau không. Tên clip không nói lên điều đó.
             var locomotion = CreateBlendTree(controller, root, "Locomotion", "Speed",
-                Get(clips, "Ranged_2H_Aiming"), Get(clips, "Running_HoldingRifle"));
+                Get(clips, "Ranged_2H_Shooting"), Get(clips, "Running_HoldingRifle"));
             root.defaultState = locomotion;
 
             // Cho tốc độ phát của trạng thái chạy được điều khiển bằng tham số, thay vì cố định 1.
@@ -190,9 +214,21 @@ namespace Survival.EditorTools
             LinkTrigger(locomotion, hit, "Hit");
 
             ReturnWhenFinished(shoot, locomotion);
-            ReturnWhenFinished(dash, locomotion);
             ReturnWhenFinished(throwState, locomotion);
             ReturnWhenFinished(hit, locomotion);
+
+            // LƯỚT thoát ra theo TRẠNG THÁI THẬT chứ không theo thời lượng clip.
+            //
+            // Clip lướt dài 0.40 giây còn cú lướt theo spec kéo 0.50 giây. Thoát theo tỉ lệ clip
+            // thì animation kết thúc sớm hơn cú lướt, và trong khoảng chênh đó nhân vật vẫn đang
+            // bị đẩy đi trong khi Animator đã về tư thế đứng — đúng cảnh trượt băng người chơi thấy.
+            //
+            // Nối theo cờ Dashing thì hai thứ luôn kết thúc cùng lúc, và sau này có tune lại
+            // thời lượng dash trên config bao nhiêu lần nữa cũng không phải sửa gì ở đây.
+            var dashExit = dash.AddTransition(locomotion);
+            dashExit.AddCondition(AnimatorConditionMode.IfNot, 0f, "Dashing");
+            dashExit.hasExitTime = false;
+            dashExit.duration = 0.1f;
 
             // Chết thì vào được từ BẤT KỲ trạng thái nào, vì player có thể chết ngay giữa
             // lúc đang bắn hoặc đang lướt. Dùng AnyState để không phải nối tay từng đường.
