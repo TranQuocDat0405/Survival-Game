@@ -90,13 +90,30 @@ namespace Survival.Combat.StatusEffects
 
             for (int i = 0; i < _keys.Count; i++)
             {
-                if (!_active.TryGetValue(_keys[i], out var runtime))
+                // Lấy khoá ra TRƯỚC khi tick, không đọc lại _keys[i] sau đó.
+                //
+                // Lý do: tick của nọc độc có thể trừ nốt số máu cuối cùng và GIẾT mục tiêu
+                // ngay tại đây. Cái chết đó bắn sự kiện OnDied, và bộ xử lý này nghe sự kiện
+                // để gọi ClearAll() — tức là danh sách _keys bị xoá sạch NGAY GIỮA VÒNG LẶP
+                // đang duyệt chính nó. Đọc lại _keys[i] sau khi tick sẽ đọc vào danh sách rỗng
+                // và văng ArgumentOutOfRangeException.
+                //
+                // Lỗi chỉ xuất hiện đúng vào lúc người chơi chết vì độc, nên rất dễ lọt qua
+                // các lần thử thông thường.
+                string id = _keys[i];
+
+                if (!_active.TryGetValue(id, out var runtime))
                     continue;
 
                 runtime.Tick(deltaTime);
 
+                // Mục tiêu vừa chết trong tick ở trên thì mọi hiệu ứng đã bị gỡ hết rồi,
+                // không còn gì để duyệt tiếp.
+                if (_active.Count == 0)
+                    return;
+
                 if (runtime.IsFinished)
-                    _finishedBuffer.Add(_keys[i]);
+                    _finishedBuffer.Add(id);
             }
 
             for (int i = 0; i < _finishedBuffer.Count; i++)
