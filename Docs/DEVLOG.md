@@ -122,7 +122,8 @@
 | Unit test EditMode (công thức, charge, poison, EXP) | ⬜ |
 | **Animation chết cho player và quái** | ⬜ Ngày 3 (art) |
 | **Shader tan biến cho quái sau khi animation chết xong** | ⬜ Ngày 3–4 |
-| **Dựng bản đồ bằng công cụ Editor** (`ArenaDresser`, `GroundTextureGenerator`) | ✅ 3150 vật, 0 collider, ~62 FPS |
+| **Dựng bản đồ bằng công cụ Editor** (`ArenaDresser`, `GroundTextureGenerator`) | ✅ 6304 vật, 867 vật cản có collider |
+| **Quái biết đi vòng qua cây và đá** (NavMesh chỉ dùng để hỏi đường) | ✅ 0/360 điểm sinh bị kẹt |
 | Scene HomeMenu | ⬜ |
 | Refactor bố cục ThirdParty | ⬜ |
 
@@ -273,3 +274,110 @@ mặt đất.
 chụp màn hình, nhưng giải mã file PNG ra thì pixel thật là RGB(29,49,13) — xanh đậm và bão hoà.
 **Ảnh chụp hiển thị lại không trung thực về màu.** Từ đây mọi quyết định về màu đều đo pixel
 chứ không tin mắt nhìn qua ảnh.
+
+---
+
+### 15/08/2026 — Quái biết đi vòng qua vật cản (NavMesh)
+
+Người chơi yêu cầu **không ai được đi xuyên cây**, và sân được mở rộng thành rừng vào được.
+Hai yêu cầu đó cộng lại làm hỏng luật cũ ở mục trên: khi cây có collider thật, cách "quái
+đi thẳng tới player" không còn dùng được nữa — con quái nào có gốc cây chắn giữa là ép mặt
+vào thân cây tới hết ván.
+
+**Cách chọn: NavMesh chỉ để HỎI ĐƯỜNG, không để DI CHUYỂN.**
+Không dùng `NavMeshAgent`. Agent tự quản luôn cả tốc độ, gia tốc, xoay và né nhau, nên
+những con số spec bắt buộc (tốc độ 3.0, xoay 360°/s) sẽ bị nó ghi đè và không còn tune được
+trên Inspector nữa — mất điểm đúng vào tiêu chí "config dễ tuning" chiếm 20% barem.
+Ở đây chỉ gọi `NavMesh.CalculatePath` để xin danh sách khúc quanh, còn việc đẩy thân vẫn do
+`Rigidbody` trong code cũ lo. Spec giữ nguyên, mà quái vẫn biết đường vòng.
+
+**Ba mức quyết định mỗi khung hình**, xếp từ rẻ tới đắt để không tốn phép tính vô ích:
+
+| Tình huống | Cách xử lý | Chi phí |
+|---|---|---|
+| Đường thẳng trống | đi thẳng | gần như 0 |
+| Có vật chắn hoặc đang kẹt | bám các khúc quanh của NavMesh | 1 lần hỏi đường mỗi 0.25 s |
+| NavMesh cũng không ra đường | lái tránh theo cảm biến như cũ | phương án chót |
+
+Đo trong phiên chơi thật: chỉ **6% số khung hình** cần tới mức thứ hai.
+
+**Hai lỗi phải lần ra mới chạy được:**
+
+1. **Tia dò bắt đầu từ BÊN TRONG một collider thì báo là không chạm gì cả.** Con quái đang
+   ép sát gốc cây, tia dò xuất phát từ trong thân nó nên trả về "phía trước trống trơn" —
+   nó kết luận đi thẳng được và đứng ì tại chỗ. Sửa bằng cách nhận biết kẹt qua **quãng
+   đường thực sự đi được**: muốn đi mà 0.25 s không nhúc nhích quá một ngưỡng thì ép sang
+   chế độ đi vòng trong 2.5 s. Đây là lần thứ hai đúng cái bẫy này xuất hiện trong dự án
+   (lần đầu là mũi tên bắn ra từ trong người player), nên đã ghi lại thành luật.
+
+2. **`isStatic = true` bật LUÔN cả cờ Navigation Static.** Mà lệnh bake NavMesh của Unity
+   đọc **hình học của MeshRenderer chứ không đọc collider** — nên toàn bộ 5437 nhánh cỏ,
+   cánh hoa, viên sỏi lát đường đều bị đưa vào bake, mỗi thứ đội mặt lưới lên vài centimet
+   và băm nó thành hàng nghìn mảnh vụn rời rạc. Quái đứng trên một mảnh cô lập thì không
+   đời nào tính ra đường đi tới người chơi.
+
+   Sửa cờ chữa được mảnh vụn (rừng từ 0% lên 97%), **nhưng chưa phải gốc rễ** — xem dưới.
+
+**Lỗi thứ ba, tìm ra nhờ đo chứ không nhờ nhìn:** sân đã thông nhưng quái vẫn có con đứng
+ngoài rìa cả ván. Nguyên nhân nằm ở chỗ khác hẳn — `SpawnPointPicker` chỉ kiểm tra hình học
+("chỗ này có trống không") nên vẫn thả quái vào những **hốc không có lối ra**: trống trải,
+khuất camera, đủ xa, qua hết mọi bài kiểm tra, mà từ đó không đi tới ai được. Nay điểm sinh
+phải qua thêm một câu hỏi cuối: **từ đây có đường đi thông tới người chơi không.**
+
+#### Gốc rễ thật, và vì sao phải bỏ hẳn cửa sổ Navigation của Unity
+
+Sửa cờ tĩnh xong, rừng ngoài vẫn chỉ 84% tới được. Tôi định kết luận "chỗ đó cây vây kín,
+người chơi cũng không vào được nên không sao" — nhưng **đo thử thì sai hẳn**: lấy 200 điểm
+không tới được, thân người chơi đặt vừa ở **199 điểm**. Tức là người chơi đi vào được mà quái
+thì không — **chỗ trốn bất tử**, đúng thứ nhà tuyển dụng thử một lần là ra.
+
+Đo tiếp thì ra nguyên nhân, và nó không nằm ở cờ tĩnh nữa:
+
+> Trên 867 vật cản, **mesh rộng trung bình gấp 7.1 lần collider**.
+> Một cây thông thân chặn người trong bán kính 0.15 nhưng tán lá xoè ra 1.12.
+
+Bake của Unity đọc mesh, nên nó cấm cả vùng tán lá mà người chơi đi lọt bên dưới. Đây là
+**lệch lạc không thể chữa bằng cách chỉnh cờ** — hai hệ thống đang đọc hai nguồn hình học
+khác nhau thì sớm muộn cũng phải lệch.
+
+Nên chuyển sang **nướng mặt lưới từ chính collider** (`NavMeshBuilder.CollectSources` với
+`NavMeshCollectGeometry.PhysicsColliders`) — đây là API lõi của Unity, không cần cài thêm gói:
+
+- `Assets/_Project/Scripts/Core/NavMeshProvider.cs` — giữ asset lưới, nạp lúc chạy, và
+  chứa toàn bộ thông số bake dưới dạng field trên Inspector.
+- `Assets/_Project/Scripts/Editor/NavMeshBaker.cs` — menu `Survival > Bake NavMesh`.
+
+Ba cái lợi, theo thứ tự quan trọng:
+1. **Thứ chặn người chơi và thứ chặn đường đi của quái nay là MỘT.** Không còn khả năng lệch.
+2. Cỏ hoa sỏi vốn không có collider nên **tự động bị bỏ qua** — không cần đánh dấu gì cả,
+   và `ArenaDresser` gỡ bỏ được hẳn phần xử lý cờ Navigation Static.
+3. Bake đọc **872 collider thay vì 6304 mesh**, nhanh hơn hẳn.
+
+Cũng chỉnh **bán kính thân dùng để bake từ 0.40 xuống 0.32** cho khớp đúng collider thật của
+player và của quái. Để lớn hơn là tự tay tạo ra những khe "người chui lọt mà lưới coi là tường".
+
+**Số đo qua ba lần sửa:**
+
+| Phép đo | Ban đầu | Sửa cờ tĩnh | Bake từ collider |
+|---|---|---|---|
+| Sân trống tới được từ giữa sân | 60% | 100% | **100%** |
+| Rừng trong tới được | 0% | 97% | **100%** |
+| Rừng ngoài tới được | 0% | 84% | **100%** |
+| Chỗ trốn bất tử (trên 4000 chỗ player đứng được) | — | 199/200 mẫu | **0** |
+| Điểm sinh quái mà quái không tới được player | 35% | 0/360 | **0/360** |
+| — riêng khi player đứng sâu trong rừng | 78% | 0% | **0%** |
+| Nguồn hình học đưa vào bake | 6304 mesh | 6304 mesh | **872 collider** |
+
+**Hai bài chạy thật trong Play mode:**
+- Player và quái hai bên một gốc đá, đường thẳng bị chặn sau 1.43/5.30 unit → quái đi vòng
+  (toạ độ z lệch khỏi đường thẳng) và vào tầm đánh sau **3.0 giây**.
+- Quái thả cách 21.96 unit xuyên rừng, đường vòng dài 22.25 unit → vào tầm đánh sau
+  **7.3 giây**, trong khi lý thuyết ở tốc độ 3.0 là 7.4 giây. Tức là **không mất một giây nào
+  vào việc kẹt**.
+
+**Sửa kèm — ba cảnh báo `CS0114` hoá ra là bug thật.** `GameSession`, `WaveManager`,
+`ExperienceSystem` đều khai báo `private void OnDestroy()` che mất `OnDestroy` của
+`SingletonMono`. Unity chỉ gọi bản của lớp con, nên **biến static trỏ tới thể hiện singleton
+không bao giờ được xoá** — chơi lại là nó trỏ vào một đối tượng đã bị huỷ. Đổi thành
+`protected override` và gọi `base.OnDestroy()`. Bài học: cảnh báo trình biên dịch không phải
+tiếng ồn, ba cái này im lặng suốt mấy ngày mà bên dưới là một lỗi vòng đời thật.

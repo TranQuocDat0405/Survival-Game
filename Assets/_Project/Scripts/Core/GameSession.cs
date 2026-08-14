@@ -46,10 +46,15 @@ namespace Survival.Core
             BindPlayer();
         }
 
-        private void OnDestroy()
+        // override chứ không phải khai báo mới: SingletonMono.OnDestroy có nhiệm vụ xoá tham chiếu
+        // static trỏ tới thể hiện này. Nếu khai báo đè lên, Unity chỉ gọi bản của lớp con và
+        // tham chiếu static sẽ tiếp tục trỏ vào một đối tượng đã bị huỷ.
+        protected override void OnDestroy()
         {
             if (_player != null && _player.Health != null)
                 _player.Health.OnDied -= HandlePlayerDied;
+
+            base.OnDestroy();
         }
 
         private void BindPlayer()

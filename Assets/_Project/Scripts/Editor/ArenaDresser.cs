@@ -344,8 +344,10 @@ namespace Survival.EditorTools
                 piece.transform.SetParent(root.transform, false);
                 piece.transform.position = offsets[i];
                 piece.layer = WallLayer;
-                piece.isStatic = true;
                 piece.AddComponent<BoxCollider>().size = sizes[i];
+
+                // Tường không có mesh nên không ảnh hưởng tới bake, nhưng vẫn đánh dấu cho đúng ý nghĩa.
+                MarkStatic(piece);
             }
 
             return 4;
@@ -668,7 +670,9 @@ namespace Survival.EditorTools
             // vẽ mặt nào trước, sinh ra vệt nhấp nháy mỗi khi camera nhúc nhích.
             instance.transform.position += Vector3.down * Random.Range(0.015f, 0.06f);
 
-            instance.isStatic = true;
+            // Đá lát nằm bẹt trên mặt đất và không cản ai, nên PHẢI loại khỏi bake NavMesh.
+            // Đưa vào thì mỗi viên đá lại đội mặt lưới lên vài centimet và băm nó thành mảnh vụn.
+            MarkStatic(instance);
             StripColliders(instance);
             return true;
         }
@@ -740,7 +744,7 @@ namespace Survival.EditorTools
             instance.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
             ScaleToHeight(instance, prefab, minHeight, maxHeight, maxFactor);
             AlignToGround(instance);
-            instance.isStatic = true;
+            MarkStatic(instance);
 
             // Model gốc có thể mang sẵn collider bọc cả khối. Gỡ sạch rồi tự dựng lại
             // theo đúng hình dạng mình muốn, thay vì phải đoán bộ asset đã đặt gì trong đó.
@@ -918,6 +922,7 @@ namespace Survival.EditorTools
             capsule.height = local.size.y;
 
             instance.layer = ObstacleLayer;
+            MarkStatic(instance);
             return true;
         }
 
@@ -935,6 +940,7 @@ namespace Survival.EditorTools
                 local.size.z * SolidShrinkFactor);
 
             instance.layer = ObstacleLayer;
+            MarkStatic(instance);
             return true;
         }
 
@@ -984,6 +990,34 @@ namespace Survival.EditorTools
             }
 
             return any && local.size.y > 0.0001f;
+        }
+
+        /// <summary>
+        /// Đánh dấu tĩnh cho một vật trang trí: gộp lô khi vẽ, tính che khuất, và nhận ánh sáng nướng sẵn.
+        ///
+        /// CỐ Ý KHÔNG BAO GIỜ BẬT NAVIGATION STATIC ở đây, kể cả cho cây và đá.
+        /// Trước đây mọi vật đều đặt <c>isStatic = true</c>, mà cờ đó bật TẤT CẢ các loại tĩnh,
+        /// bao gồm cả Navigation Static. Lệnh bake của cửa sổ Navigation lại đọc HÌNH HỌC CỦA MESH
+        /// chứ không đọc collider, nên toàn bộ 6300 nhánh cỏ, cánh hoa, viên sỏi đều bị đưa vào
+        /// bake và băm mặt lưới thành hàng nghìn mảnh vụn rời rạc — rừng 0% tới được từ giữa sân.
+        ///
+        /// Sửa cờ tuy chữa được mảnh vụn nhưng vẫn còn một lệch lạc nữa không chữa nổi:
+        /// mesh cây rộng gấp trung bình 7.1 lần collider của nó, nên mặt lưới cấm luôn cả vùng
+        /// tán lá mà người chơi đi lọt bên dưới.
+        ///
+        /// Nên nay mặt lưới được nướng từ CHÍNH COLLIDER bằng công cụ riêng
+        /// (menu <c>Survival > Bake NavMesh</c>, xem <c>Survival.Core.NavMeshProvider</c>).
+        /// Việc dựng bản đồ không còn dính dáng gì tới NavMesh nữa, ngoài một điều duy nhất:
+        /// dựng lại bản đồ xong thì phải bake lại.
+        /// </summary>
+        private static void MarkStatic(GameObject instance)
+        {
+            GameObjectUtility.SetStaticEditorFlags(
+                instance,
+                StaticEditorFlags.BatchingStatic
+                | StaticEditorFlags.OccluderStatic
+                | StaticEditorFlags.OccludeeStatic
+                | StaticEditorFlags.ContributeGI);
         }
 
         private static void StripColliders(GameObject root)

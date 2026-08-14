@@ -55,6 +55,46 @@ namespace Survival.Enemies
             "mà đường đi thật ra không hề đâm vào, trông như bị hoảng.")]
         private float _avoidProbeDistance = 1.6f;
 
+        [Header("Tìm đường vòng")]
+        [SerializeField, Min(0.05f), Tooltip(
+            "Bao lâu tính lại đường một lần, tính bằng giây.\n\n" +
+            "Tính đường là phép đắt nhất trong lớp này nên KHÔNG được tính mỗi khung hình. " +
+            "Ngắn quá thì tốn máy vô ích vì đường gần như không đổi; dài quá thì quái phản ứng " +
+            "chậm khi người chơi vòng sang hướng khác.")]
+        private float _pathRefreshInterval = 0.25f;
+
+        [SerializeField, Min(0.1f), Tooltip(
+            "Người chơi chạy xa khỏi đích của đường cũ bao nhiêu thì tính lại ngay, không chờ hết hạn.\n" +
+            "Nhờ vậy quái vẫn bám kịp lúc người chơi đổi hướng đột ngột.")]
+        private float _pathRetargetDistance = 1.5f;
+
+        [SerializeField, Min(0.05f), Tooltip(
+            "Tới gần một mốc trên đường bao nhiêu thì coi như đã qua và nhắm tới mốc kế tiếp.\n" +
+            "Nhỏ quá thì quái cố chạm chính xác từng mốc và đi giật cục ở các khúc cua.")]
+        private float _cornerReachedDistance = 0.4f;
+
+        /// <summary>Đường đang bám theo. Cấp phát một lần rồi dùng lại, tránh sinh rác mỗi lần tính.</summary>
+        private UnityEngine.AI.NavMeshPath _path;
+
+        /// <summary>
+        /// Các mốc của đường. Mảng cố định dùng với GetCornersNonAlloc để không cấp phát mảng mới
+        /// mỗi lần tính đường — sáu con quái tính lại bốn lần mỗi giây thì lượng rác đó cộng dồn rất nhanh.
+        /// </summary>
+        private readonly Vector3[] _pathCorners = new Vector3[24];
+        private int _pathCornerCount;
+        private int _pathCornerIndex;
+        private float _pathTimer;
+        private Vector3 _lastPathTarget;
+
+        /// <summary>Vị trí ở khung hình trước, dùng để biết thật sự đi được bao xa.</summary>
+        private Vector3 _lastPosition;
+
+        /// <summary>Đã bị chặn liên tục bao lâu.</summary>
+        private float _stuckTimer;
+
+        /// <summary>Còn bao lâu nữa thì thôi ép đi đường vòng.</summary>
+        private float _forcePathTimer;
+
         [Header("Lúc chết")]
         [SerializeField, Min(0f), Tooltip(
             "Chờ bao lâu sau khi chết rồi mới trả về pool, tính bằng giây.\n" +
@@ -170,6 +210,16 @@ namespace Survival.Enemies
             _rigidbody.isKinematic = false;
             _rigidbody.velocity = Vector3.zero;
             _rigidbody.angularVelocity = Vector3.zero;
+
+            // Xoá đường đi của kiếp trước. Quái lấy ra từ pool mang theo nguyên trạng thái cũ,
+            // nên nếu không xoá thì nó sẽ lững thững đi theo lộ trình tính cho một vị trí
+            // hoàn toàn khác trước khi kịp tính lại.
+            _pathCornerCount = 0;
+            _pathCornerIndex = 0;
+            _pathTimer = 0f;
+            _stuckTimer = 0f;
+            _forcePathTimer = 0f;
+            _lastPosition = _cachedTransform.position;
             if (_collider != null)
                 _collider.enabled = true;
 
@@ -258,9 +308,173 @@ namespace Survival.Enemies
                 return;
 
             direction.Normalize();
-            direction = SteerAroundObstacles(direction);
+            direction = ResolveMoveDirection(target.position, direction);
 
             _rigidbody.velocity = direction * Stats.Get(EStatType.MoveSpeed);
+        }
+
+        /// <summary>
+        /// Hướng đi thật sự trong khung hình này. Đây là nơi quyết định đi thẳng hay đi vòng.
+        ///
+        /// BA MỨC, xét từ rẻ tới đắt:
+        ///
+        ///   1. NHÌN THẤY PLAYER thì đi thẳng. Đây là đa số thời gian của một trận, và nó
+        ///      cho ra chuyển động thẳng thớm, phản ứng tức thì với mọi bước né của người chơi.
+        ///      Đi đường vòng trong trường hợp này chỉ làm quái chạy lượn vô nghĩa.
+        ///
+        ///   2. BỊ CHẮN thì hỏi NavMesh đường đi vòng. Chỉ tính lại vài lần mỗi giây chứ không
+        ///      phải mỗi khung hình — tính đường là phép đắt nhất trong cả lớp này.
+        ///
+        ///   3. KHÔNG TÍNH ĐƯỢC ĐƯỜNG (quái vừa sinh ra ngoài lưới, hoặc bị đẩy vào kẹt góc)
+        ///      thì quay về cách cũ: dò tia rồi trượt dọc vật cản. Luôn phải có đường lui,
+        ///      vì thà quái đi hơi ngu còn hơn đứng chết một chỗ.
+        /// </summary>
+        private Vector3 ResolveMoveDirection(Vector3 targetPosition, Vector3 straightDirection)
+        {
+            UpdateStuckDetection();
+
+            bool mustDetour = _forcePathTimer > 0f || HasObstacleBetween(targetPosition);
+
+            if (!mustDetour)
+            {
+                _pathCornerCount = 0;   // bỏ đường cũ, lần sau bị chắn sẽ tính lại từ đầu
+                return straightDirection;
+            }
+
+            if (TryFollowPath(targetPosition, out Vector3 pathDirection))
+                return pathDirection;
+
+            return SteerAroundObstacles(straightDirection);
+        }
+
+        /// <summary>
+        /// Phát hiện kẹt bằng QUÃNG ĐƯỜNG THẬT SỰ ĐI ĐƯỢC, không bằng tia ngắm.
+        ///
+        /// ĐÂY LÀ BÀI HỌC PHẢI NHỚ. Ban đầu tôi chỉ kiểm tra "giữa mình và player có vật cản
+        /// không" bằng một tia hình cầu. Cách đó bỏ sót đúng trường hợp quan trọng nhất:
+        /// khi quái đã ÁP SÁT vào gốc cây, tia bắt đầu từ bên trong collider, mà Unity thì
+        /// KHÔNG báo va chạm cho tia xuất phát từ trong lòng một collider.
+        /// Kết quả là quái húc thẳng vào cây, vận tốc vẫn đúng 3.0 nhưng không nhích được
+        /// centimet nào, mà phép kiểm lại khẳng định "đường thông thoáng".
+        /// (Đúng hiện tượng đã gặp khi kiểm tra mũi tên xuyên qua tảng đá.)
+        ///
+        /// So quãng đường đi được với quãng đường LẼ RA phải đi thì không bao giờ bị đánh lừa:
+        /// bị chặn là bị chặn, bất kể hình học phía trước trông ra sao.
+        /// </summary>
+        private void UpdateStuckDetection()
+        {
+            if (_forcePathTimer > 0f)
+                _forcePathTimer -= Time.deltaTime;
+
+            float expected = Stats.Get(EStatType.MoveSpeed) * Time.deltaTime;
+            float actual = Vector3.Distance(_cachedTransform.position, _lastPosition);
+            _lastPosition = _cachedTransform.position;
+
+            if (expected <= 0.0001f)
+                return;
+
+            // Đi được dưới một phần ba mức đáng lẽ phải đi thì coi như đang bị chặn.
+            if (actual < expected * 0.35f)
+                _stuckTimer += Time.deltaTime;
+            else
+                _stuckTimer = 0f;
+
+            if (_stuckTimer < StuckThreshold)
+                return;
+
+            // Ép đi đường vòng một lúc. Phải giữ đủ lâu để quái thoát hẳn ra khỏi chỗ kẹt,
+            // nếu thả ra ngay khi vừa nhúc nhích được thì nó quay đầu húc vào đúng cái cây đó.
+            _stuckTimer = 0f;
+            _forcePathTimer = ForcePathDuration;
+            _pathCornerCount = 0;   // buộc tính lại đường ngay lập tức
+        }
+
+        /// <summary>Bị chặn liên tục bao lâu thì kết luận là kẹt, tính bằng giây.</summary>
+        private const float StuckThreshold = 0.25f;
+
+        /// <summary>Ép bám đường vòng bao lâu sau khi phát hiện kẹt, tính bằng giây.</summary>
+        private const float ForcePathDuration = 2.5f;
+
+        /// <summary>Giữa mình và mục tiêu có vật cản chắn không.</summary>
+        private bool HasObstacleBetween(Vector3 targetPosition)
+        {
+            if (_obstacleMask.value == 0)
+                return false;
+
+            Vector3 from = _cachedTransform.position + Vector3.up * _avoidBodyRadius;
+            Vector3 to = targetPosition + Vector3.up * _avoidBodyRadius;
+            Vector3 delta = to - from;
+            float distance = delta.magnitude;
+
+            if (distance < 0.01f)
+                return false;
+
+            return Physics.SphereCast(from, _avoidBodyRadius, delta / distance, out _, distance,
+                _obstacleMask, QueryTriggerInteraction.Ignore);
+        }
+
+        /// <summary>
+        /// Bám theo đường do NavMesh tính. Trả về false nếu không có đường hợp lệ.
+        /// </summary>
+        private bool TryFollowPath(Vector3 targetPosition, out Vector3 direction)
+        {
+            direction = Vector3.zero;
+
+            _pathTimer -= Time.deltaTime;
+
+            // Tính lại khi hết hạn, hoặc khi player đã chạy xa khỏi chỗ mà đường cũ dẫn tới.
+            bool targetMovedFar = (targetPosition - _lastPathTarget).sqrMagnitude > _pathRetargetDistance * _pathRetargetDistance;
+            if (_pathTimer <= 0f || targetMovedFar || _pathCornerCount == 0)
+            {
+                _pathTimer = _pathRefreshInterval;
+                RecalculatePath(targetPosition);
+            }
+
+            if (_pathCornerCount == 0)
+                return false;
+
+            // Bỏ qua các mốc đã đi tới nơi. Dùng while chứ không phải if: một khung hình chậm
+            // có thể vượt qua hai mốc liền, nếu chỉ bỏ một thì quái sẽ quay đầu đi ngược lại.
+            while (_pathCornerIndex < _pathCornerCount)
+            {
+                Vector3 flat = _pathCorners[_pathCornerIndex] - _cachedTransform.position;
+                flat.y = 0f;
+                if (flat.sqrMagnitude > _cornerReachedDistance * _cornerReachedDistance)
+                {
+                    direction = flat.normalized;
+                    return true;
+                }
+                _pathCornerIndex++;
+            }
+
+            return false;
+        }
+
+        private void RecalculatePath(Vector3 targetPosition)
+        {
+            _pathCornerCount = 0;
+            _pathCornerIndex = 0;
+            _lastPathTarget = targetPosition;
+
+            if (_path == null)
+                _path = new UnityEngine.AI.NavMeshPath();
+
+            // Kéo hai đầu về đúng mặt lưới trước khi tính. Quái có thể đang đứng lệch ra ngoài
+            // lưới một chút do bị xô đẩy, và khi đó phép tính đường sẽ thất bại ngay.
+            if (!UnityEngine.AI.NavMesh.SamplePosition(_cachedTransform.position, out var fromHit, 2f, UnityEngine.AI.NavMesh.AllAreas))
+                return;
+            if (!UnityEngine.AI.NavMesh.SamplePosition(targetPosition, out var toHit, 2f, UnityEngine.AI.NavMesh.AllAreas))
+                return;
+
+            if (!UnityEngine.AI.NavMesh.CalculatePath(fromHit.position, toHit.position, UnityEngine.AI.NavMesh.AllAreas, _path))
+                return;
+
+            // Đường cụt vẫn dùng được: nó dẫn tới chỗ gần nhất có thể tới, tốt hơn là đứng im.
+            _pathCornerCount = _path.GetCornersNonAlloc(_pathCorners);
+
+            // Mốc đầu tiên luôn là chỗ đang đứng, bỏ qua để khỏi tự đi tới chính mình.
+            if (_pathCornerCount > 1)
+                _pathCornerIndex = 1;
         }
 
         /// <summary>

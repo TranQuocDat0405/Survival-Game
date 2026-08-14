@@ -33,10 +33,15 @@ namespace Survival.Progression
                 EnemyRegistry.I.OnEnemyDied += HandleEnemyDied;
         }
 
-        private void OnDestroy()
+        // override chứ không phải khai báo mới: SingletonMono.OnDestroy có nhiệm vụ xoá tham chiếu
+        // static trỏ tới thể hiện này. Nếu khai báo đè lên, Unity chỉ gọi bản của lớp con và
+        // tham chiếu static sẽ tiếp tục trỏ vào một đối tượng đã bị huỷ.
+        protected override void OnDestroy()
         {
             if (EnemyRegistry.I != null)
                 EnemyRegistry.I.OnEnemyDied -= HandleEnemyDied;
+
+            base.OnDestroy();
         }
 
         private void HandleEnemyDied(EnemyActor enemy)
