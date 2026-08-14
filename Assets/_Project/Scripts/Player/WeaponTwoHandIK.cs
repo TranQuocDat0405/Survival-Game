@@ -61,6 +61,20 @@ namespace Survival.Player
         [SerializeField, Min(0.01f), Tooltip("Thời gian tắt/bật IK cho mượt, tính bằng giây. Tắt đột ngột thì tay giật một cái rất rõ.")]
         private float _blendDuration = 0.15f;
 
+        [Header("Hướng nhìn của đầu")]
+        [SerializeField, Range(0f, 1f), Tooltip(
+            "Ép đầu nhìn thẳng về hướng nhân vật đang chĩa nỏ.\n\n" +
+            "Clip gốc cho nhân vật CÚI ĐẦU XUỐNG nhìn vũ khí (đo được nghiêng 26.5 độ). " +
+            "Nhìn từ camera trên cao thì cái đầu cúi đó trông như đang nhìn đi đâu khác, " +
+            "trong khi thân và nỏ đều hướng ra trước — rất mất tự nhiên.\n\n" +
+            "Để 0 là giữ nguyên đầu theo animation.")]
+        private float _headLookWeight = 0.8f;
+
+        [SerializeField, Range(0f, 1f), Tooltip(
+            "Cho phép cả thân xoay theo hướng nhìn bao nhiêu. Để thấp thôi, " +
+            "vì thân đã hướng đúng rồi và xoay thêm sẽ phá tư thế cầm nỏ.")]
+        private float _bodyLookWeight = 0.1f;
+
         private Animator _animator;
 
         /// <summary>Trọng số đang dùng thật sự, chạy dần về đích thay vì nhảy cóc.</summary>
@@ -94,6 +108,30 @@ namespace Survival.Player
 
             ApplyHand(AvatarIKGoal.LeftHand, _leftGrip);
             ApplyHand(AvatarIKGoal.RightHand, _rightGrip);
+            ApplyHeadLook();
+        }
+
+        /// <summary>
+        /// Ép đầu nhìn thẳng về phía trước thay vì cúi xuống nhìn vũ khí.
+        ///
+        /// Điểm nhìn được đặt RẤT XA phía trước. Đặt gần thì mỗi lần nhân vật nhích một chút,
+        /// góc tới điểm đó đổi rất nhiều và cái đầu sẽ lắc theo; đặt xa thì hướng gần như
+        /// không đổi nên đầu giữ yên và chỉ xoay khi nhân vật thật sự đổi hướng.
+        /// </summary>
+        private void ApplyHeadLook()
+        {
+            if (_headLookWeight <= 0.001f)
+                return;
+
+            var owner = _actor != null ? _actor.transform : transform.parent;
+            if (owner == null)
+                return;
+
+            Vector3 target = owner.position + owner.forward * 12f + Vector3.up * 0.9f;
+
+            // Bốn tham số: tổng thể, thân, đầu, mắt. Model không có xương mắt nên để 0.
+            _animator.SetLookAtWeight(_currentWeight, _bodyLookWeight, _headLookWeight, 0f);
+            _animator.SetLookAtPosition(target);
         }
 
         private void ApplyHand(AvatarIKGoal goal, Transform grip)
