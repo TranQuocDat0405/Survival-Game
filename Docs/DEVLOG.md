@@ -122,6 +122,7 @@
 | Unit test EditMode (công thức, charge, poison, EXP) | ⬜ |
 | **Animation chết cho player và quái** | ⬜ Ngày 3 (art) |
 | **Shader tan biến cho quái sau khi animation chết xong** | ⬜ Ngày 3–4 |
+| **Dựng bản đồ bằng công cụ Editor** (`ArenaDresser`, `GroundTextureGenerator`) | ✅ 3150 vật, 0 collider, ~62 FPS |
 | Scene HomeMenu | ⬜ |
 | Refactor bố cục ThirdParty | ⬜ |
 
@@ -221,3 +222,54 @@ Animation đúng nằm trong chính pack Adventurers/Skeletons: `Animations/fbx/
 2. Thanh máu sẽ vẽ sai sau khi lên cấp vì máu tối đa đổi mà máu hiện tại thì không → thêm `IStatProvider.OnStatChanged` và `Health.OnMaxChanged`.
 3. `PlayerConfigSO` / `EnemyConfigSO` chưa kiểm tra thiếu chỉ số → xoá nhầm một dòng làm `MoveSpeed` về 0 (nhân vật đứng im) mà không báo gì. Đã thêm `OnValidate`.
 4. `Health` sinh ra với 0 máu và `IsAlive = false` nếu không ai gọi `Initialize` → mọi đòn đánh vào nó bị bỏ qua âm thầm. Đã thêm tự khởi tạo trong `Awake`.
+
+---
+
+### 14/08/2026 — Dựng bản đồ
+
+Người chơi báo map trống trải, "hoang sơ quá, không giống một map game". Đi xem lại
+video tham chiếu và cách các game cùng thể loại dựng cảnh, rút ra ba khác biệt:
+nền đất có **mảng màu lớn** chứ không phải một sắc xanh đều; cỏ mọc **thành đám**
+chứ không rải đều; và có **mốc thị giác** (đá to, lối mòn) để mắt bám vào khi di chuyển.
+
+**Hai công cụ Editor** (`Assets/_Project/Scripts/Editor/`) — dựng bằng code chứ không
+kéo thả tay, để chạy lại lúc nào cũng ra kết quả như nhau:
+
+| Công cụ | Menu | Việc |
+|---|---|---|
+| `GroundTextureGenerator` | `Survival > Generate Ground Texture` | Sinh texture nền 1024² lát liền mạch |
+| `ArenaDresser` | `Survival > Dress Arena` | Rải 3150 vật trang trí theo 3 lớp |
+
+**Texture nền.** `Grass.png` đi kèm bộ Stylized Nature không phải texture mặt đất mà là
+một *bảng màu dạng dải* để model low-poly tra màu qua UV — lát ra làm nền thì thành sọc
+ngang màn hình. Thay bằng nhiễu Perlin tự sinh, lấy mẫu **quanh một vòng tròn** thay vì
+theo đường thẳng nên mép trái nối khít mép phải, lát không thấy đường ghép. Ba tầng nhiễu:
+tần số 1.6 quyết định mảng cỏ lớn, 5 phá biên cho đỡ tròn trịa, 26 tạo lấm tấm; cộng một
+tầng vệt đất **độc lập** — nếu dùng chung tầng thì đất luôn rơi đúng chỗ cỏ sẫm nhất,
+thành quy luật đều đặn mà mắt nhận ra ngay là máy sinh.
+
+**Ba luật giữ cho sân vẫn đánh nhau được** (đây mới là phần quan trọng, không phải phần đẹp):
+
+1. **Gỡ sạch collider** của mọi vật trang trí. Quái đi thẳng tới player chứ không qua
+   NavMesh, nên chỉ một cục đá có collider là chúng kẹt cứng tại chỗ.
+2. **Không vật nào trong vùng chơi cao quá 0.65 unit**, so với nhân vật cao 1.4 —
+   cây cỏ không bao giờ che mất quái đang lao tới.
+3. **Cây to chỉ mọc từ bán kính 21 trở ra.** Vùng chiến đấu để trống hoàn toàn.
+
+Nới mặt đất từ 60×60 lên 110×110 để mép vuông của plane không bao giờ lọt vào khung hình.
+
+**Kết quả đo được:** 3150 vật · **0 collider** · 620 cây xanh / 62 cây lá đỏ (chỉ 10%, làm
+điểm nhấn) / 55 cây khô · **16.0 ms mỗi khung hình (~62 FPS)** · không vật nào lọt ra ngoài
+mặt đất.
+
+**Lỗi tìm được trong lúc dựng:**
+1. Bộ lọc tên dùng tiền tố `"PineTree_"` nhưng file thật tên `Pine_` → **toàn bộ cây thông
+   bị bỏ qua âm thầm**, không có lỗi nào báo ra. Rừng thiếu hẳn một loại cây mà không biết.
+2. Cảnh ngả sang đỏ như mùa thu. Đọc thẳng pixel `Leaves_TwistedTree_C.png` ra RGB(167,23,23):
+   `TwistedTree_` là cây **lá đỏ**, không phải cây xanh. Tách thành danh sách điểm nhấn riêng, dùng 10%.
+3. Cỏ và đá cao 2–2.9 unit, **cao hơn cả nhân vật 1.4 unit**. Đã chỉnh tỉ lệ theo luật số 2 ở trên.
+
+**Bài học tự rút ra:** tôi nhiều lần kết luận nền đất "bị rửa trôi, nhạt màu" khi nhìn ảnh
+chụp màn hình, nhưng giải mã file PNG ra thì pixel thật là RGB(29,49,13) — xanh đậm và bão hoà.
+**Ảnh chụp hiển thị lại không trung thực về màu.** Từ đây mọi quyết định về màu đều đo pixel
+chứ không tin mắt nhìn qua ảnh.
