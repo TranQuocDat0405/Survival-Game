@@ -159,10 +159,20 @@ namespace Survival.Player
 
         private void HandleDamaged(Health target, float appliedDamage, in DamageInfo info)
         {
+            if (_animator == null || appliedDamage <= 0f || !target.IsAlive)
+                return;
+
             // Chỉ giật người khi thật sự mất máu. Nếu giáp chặn hết thì không giật,
             // để người chơi phân biệt được "đỡ được" với "ăn đủ".
-            if (_animator != null && appliedDamage > 0f && target.IsAlive)
-                _animator.SetTrigger(HitHash);
+            //
+            // ĐỘC THÌ KHÔNG GIẬT. Độc là sát thương theo thời gian chứ không phải một cú đánh,
+            // mà nó trừ máu mỗi giây suốt thời gian dính — phát anim trúng đòn mỗi tick thì
+            // nhân vật giật liên tục, vừa sai về cảm giác vừa cắt ngang nhịp bước chân.
+            // Người chơi vẫn biết mình đang dính độc qua hiệu ứng báo độc và thanh máu tụt dần.
+            if (info.Source == EDamageSource.Poison)
+                return;
+
+            _animator.SetTrigger(HitHash);
         }
 
         private void HandleDied(Health target)

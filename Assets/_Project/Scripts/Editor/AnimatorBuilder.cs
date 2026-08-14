@@ -201,21 +201,16 @@ namespace Survival.EditorTools
             locomotion.speedParameterActive = true;
             locomotion.speedParameter = "LocomotionSpeed";
 
-            var shoot = AddState(root, "Shoot", Get(clips, "Ranged_2H_Shoot"), new Vector3(320f, -120f, 0f));
-            var dash  = AddState(root, "Dash",  Get(clips, "Dodge_Forward"),   new Vector3(320f, -40f, 0f));
-            var throwState = AddState(root, "Throw", Get(clips, "Throw"),      new Vector3(320f, 40f, 0f));
-            var hit   = AddState(root, "Hit",   Get(clips, "Hit_A"),           new Vector3(320f, 120f, 0f));
-            var death = AddState(root, "Death", Get(clips, "Death_A"),         new Vector3(320f, 220f, 0f));
+            // TẦNG GỐC chỉ giữ những động tác TOÀN THÂN: di chuyển, lăn người, gục chết.
+            //
+            // Bắn, ném bom và trúng đòn đã chuyển sang tầng thân trên (xem BuildUpperBodyLayer).
+            // Lý do: chúng là động tác nửa người. Để ở tầng gốc thì lúc bắn cả clip chiếm luôn
+            // hai chân, chân ngừng bước trong khi nhân vật vẫn trôi đi — nhìn ra thành trượt băng.
+            // Dính độc còn tệ hơn vì mỗi giây một tick lại kích hoạt anim trúng đòn.
+            var dash  = AddState(root, "Dash",  Get(clips, "Dodge_Forward"), new Vector3(320f, -40f, 0f));
+            var death = AddState(root, "Death", Get(clips, "Death_A"),       new Vector3(320f, 220f, 0f));
 
-            // Ba skill và đòn trúng: vào bằng trigger, tự quay về khi clip chạy xong.
-            LinkTrigger(locomotion, shoot, "Shoot");
             LinkTrigger(locomotion, dash, "Dash");
-            LinkTrigger(locomotion, throwState, "Throw");
-            LinkTrigger(locomotion, hit, "Hit");
-
-            ReturnWhenFinished(shoot, locomotion);
-            ReturnWhenFinished(throwState, locomotion);
-            ReturnWhenFinished(hit, locomotion);
 
             // LƯỚT thoát ra theo TRẠNG THÁI THẬT chứ không theo thời lượng clip.
             //
@@ -243,6 +238,9 @@ namespace Survival.EditorTools
             revive.AddCondition(AnimatorConditionMode.IfNot, 0f, "Dead");
             revive.duration = 0.15f;
             revive.hasExitTime = false;
+
+            // Tầng thân trên dựng SAU CÙNG, vì nó cần các tham số đã khai báo ở trên.
+            BuildUpperBodyLayer(controller, clips);
 
             EditorUtility.SetDirty(controller);
         }
@@ -299,6 +297,100 @@ namespace Survival.EditorTools
             revive.hasExitTime = false;
 
             EditorUtility.SetDirty(controller);
+        }
+
+        // ------------------------------------------------------------------ tầng thân trên
+
+        /// <summary>
+        /// Tạo mặt nạ chỉ cho phép điều khiển THÂN TRÊN và HAI TAY.
+        ///
+        /// Đây là chìa khoá để vừa chạy vừa bắn. Nếu clip bắn chiếm cả người thì trong lúc bắn
+        /// chân ngừng bước trong khi nhân vật vẫn trôi đi — nhìn ra thành trượt băng. Với mặt nạ
+        /// này, tầng bắn chỉ ghi lên thân và tay, còn chân vẫn do tầng di chuyển điều khiển.
+        ///
+        /// Chân, bàn chân và gốc đều bị loại. Gốc đặc biệt quan trọng: cho phép nó thì clip bắn
+        /// sẽ kéo cả vị trí nhân vật theo và đè lên chuyển động do vật lý điều khiển.
+        /// </summary>
+        private static AvatarMask CreateUpperBodyMask()
+        {
+            string path = $"{OutputFolder}/UpperBodyMask.mask";
+
+            // Giữ nguyên file nếu đã có, vì Animator Controller tham chiếu tới nó bằng GUID —
+            // xoá đi tạo lại sẽ làm tầng thân trên mất mặt nạ mà không có lỗi nào báo ra.
+            var mask = AssetDatabase.LoadAssetAtPath<AvatarMask>(path);
+            if (mask == null)
+            {
+                mask = new AvatarMask();
+                AssetDatabase.CreateAsset(mask, path);
+            }
+
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Root, false);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Body, true);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Head, true);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftArm, true);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightArm, true);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftFingers, true);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightFingers, true);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftLeg, false);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightLeg, false);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftFootIK, false);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightFootIK, false);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftHandIK, true);
+            mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightHandIK, true);
+
+            EditorUtility.SetDirty(mask);
+            return mask;
+        }
+
+        /// <summary>
+        /// Dựng tầng thân trên chứa các động tác chỉ dùng nửa người: bắn, ném bom, trúng đòn.
+        ///
+        /// Tầng này luôn bắt đầu ở một trạng thái RỖNG (không clip). Trạng thái rỗng nghĩa là
+        /// tầng không ghi đè gì cả, nên bình thường nhân vật hoàn toàn theo tầng di chuyển.
+        /// Khi có trigger thì nó nhảy sang động tác tương ứng, chạy xong lại về rỗng.
+        ///
+        /// Cú LƯỚT cố tình KHÔNG đặt ở đây mà để lại tầng gốc: lăn người là động tác toàn thân,
+        /// tách nửa trên nửa dưới sẽ ra cảnh nửa người lăn còn hai chân vẫn chạy bộ.
+        /// </summary>
+        private static void BuildUpperBodyLayer(AnimatorController controller, Dictionary<string, AnimationClip> clips)
+        {
+            var mask = CreateUpperBodyMask();
+
+            controller.AddLayer("UpperBody");
+            var layers = controller.layers;
+            var upper = layers[layers.Length - 1];
+            upper.avatarMask = mask;
+            upper.defaultWeight = 1f;
+            upper.blendingMode = AnimatorLayerBlendingMode.Override;
+            layers[layers.Length - 1] = upper;
+            controller.layers = layers;
+
+            var machine = upper.stateMachine;
+
+            // Trạng thái rỗng: không có clip nên tầng này không ghi đè gì lên tầng dưới.
+            var empty = machine.AddState("Empty", new Vector3(40f, 0f, 0f));
+            empty.writeDefaultValues = false;
+            machine.defaultState = empty;
+
+            var shoot = AddState(machine, "Shoot", Get(clips, "Ranged_2H_Shoot"), new Vector3(320f, -80f, 0f));
+            var throwState = AddState(machine, "Throw", Get(clips, "Throw"), new Vector3(320f, 0f, 0f));
+            var hit = AddState(machine, "Hit", Get(clips, "Hit_A"), new Vector3(320f, 80f, 0f));
+
+            LinkTrigger(empty, shoot, "Shoot");
+            LinkTrigger(empty, throwState, "Throw");
+            LinkTrigger(empty, hit, "Hit");
+
+            ReturnWhenFinished(shoot, empty);
+            ReturnWhenFinished(throwState, empty);
+            ReturnWhenFinished(hit, empty);
+
+            // Chết thì tầng trên phải NHẢ RA ngay, nếu không nửa người trên vẫn giữ tư thế bắn
+            // trong khi nửa dưới đã gục xuống.
+            var toEmpty = machine.AddAnyStateTransition(empty);
+            toEmpty.AddCondition(AnimatorConditionMode.If, 0f, "Dead");
+            toEmpty.duration = 0.1f;
+            toEmpty.hasExitTime = false;
+            toEmpty.canTransitionToSelf = false;
         }
 
         // ------------------------------------------------------------------ tiện ích

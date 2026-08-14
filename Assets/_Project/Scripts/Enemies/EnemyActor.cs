@@ -253,6 +253,10 @@ namespace Survival.Enemies
                 return;
             }
 
+            // Cùng lý do với StopMoving: xác đã chuyển sang kinematic thì không được ghi vận tốc.
+            if (_rigidbody.isKinematic)
+                return;
+
             direction.Normalize();
             direction = SteerAroundObstacles(direction);
 
@@ -318,7 +322,26 @@ namespace Survival.Enemies
             return slide.normalized;
         }
 
-        public void StopMoving() => _rigidbody.velocity = Vector3.zero;
+        /// <summary>
+        /// Dừng hẳn chuyển động.
+        ///
+        /// PHẢI kiểm tra kinematic trước khi ghi vận tốc. Lúc quái chết, thân vật lý được
+        /// chuyển sang kinematic để cái xác không trượt đi — mà Unity KHÔNG cho đặt vận tốc
+        /// lên thân kinematic, ghi vào là một dòng cảnh báo đỏ trong console.
+        ///
+        /// Đặt lá chắn NGAY TRONG HÀM NÀY chứ không phải ở từng nơi gọi, vì hàm được gọi từ
+        /// nhiều chỗ (trạng thái AI, lúc chết, lúc trả về pool) và chỉ cần quên một chỗ là
+        /// cảnh báo quay lại. Đây đúng là cách PoolService đã làm và tôi lẽ ra phải làm theo
+        /// ngay từ đầu — trước đó tôi mới chỉ vá đúng một nơi gọi trong Setup.
+        /// </summary>
+        public void StopMoving()
+        {
+            if (_rigidbody == null || _rigidbody.isKinematic)
+                return;
+
+            _rigidbody.velocity = Vector3.zero;
+            _rigidbody.angularVelocity = Vector3.zero;
+        }
 
         /// <summary>
         /// Ra đòn NGAY BÂY GIỜ. Được gọi tại đúng thời điểm gây sát thương trong animation.
