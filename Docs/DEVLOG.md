@@ -381,3 +381,23 @@ player và của quái. Để lớn hơn là tự tay tạo ra những khe "ngư
 không bao giờ được xoá** — chơi lại là nó trỏ vào một đối tượng đã bị huỷ. Đổi thành
 `protected override` và gọi `base.OnDestroy()`. Bài học: cảnh báo trình biên dịch không phải
 tiếng ồn, ba cái này im lặng suốt mấy ngày mà bên dưới là một lỗi vòng đời thật.
+
+> ⚠️ **Dựng lại bản đồ thì phải bake lại mặt lưới.**
+> Chạy `Survival > Dress Arena` xong thì chạy tiếp `Survival > Bake NavMesh`.
+> Bỏ bước hai thì mặt lưới vẫn là của bản đồ cũ và quái sẽ đi vòng qua những cái cây
+> không còn tồn tại.
+
+---
+
+## 4. Việc còn lại (chốt cuối ngày 15/08/2026)
+
+Thứ tự này do người chơi chốt, không phải tôi tự sắp.
+
+| # | Việc | Ghi chú |
+|---|---|---|
+| 1 | Quái đang nghỉ 1 giây sau khi đánh **không được bị con sau xô đẩy** | Đã chốt cách làm: **ghim cứng** con đang nghỉ, biến nó thành vật cản không đẩy được; con phía sau tự vòng qua như vòng qua gốc cây — tận dụng luôn phần tìm đường vừa làm |
+| 2 | **Bonus mục 8 README** — camera shake, VFX, SFX | Ưu tiên trước hai việc dưới vì đây là mục **có điểm cộng thật**. Cinemachine Impulse; Cartoon FX Remaster đã import sẵn; SFX Kenney |
+| 3 | Hiệu ứng báo dính độc trên người player và cạnh thanh máu | Ý thêm, **ngoài spec** |
+| 4 | Bình hồi máu spawn định kỳ quanh player (10 s, tối đa 3, hồi 75) | Ý thêm, **ngoài spec** |
+| 5 | Cấu hình sẵn Build Windows + Android, viết hướng dẫn | **Không tự build** — người chơi tự bấm. Làm cuối cùng |
+| 6 | Scene HomeMenu · refactor thư mục ThirdParty · README nộp bài · video gameplay | Chỉ làm sau khi mọi yêu cầu bắt buộc đã đủ và đúng |
