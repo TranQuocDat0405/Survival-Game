@@ -23,8 +23,11 @@ namespace Survival.Config
         [Header("Nhận dạng")]
         [SerializeField] private string _displayName = "Enemy";
 
-        [SerializeField, Tooltip("Phần hình ảnh + Animator của quái. Được gắn vào prefab logic lúc sinh ra.")]
-        private GameObject _visualPrefab;
+        // Đã bỏ trường _visualPrefab. Ý định ban đầu là gắn model vào prefab logic lúc sinh ra,
+        // nhưng cuối cùng model được đặt thẳng trong prefab quái nên KHÔNG CHỖ NÀO đọc tới nó.
+        // Nó chỉ còn tác dụng duy nhất là bắn ra một cảnh báo "chưa gán model hiển thị" mỗi lần
+        // chạm vào file config — một cảnh báo giả, mà cảnh báo giả thì nguy hiểm hơn không có gì:
+        // nhìn quen mắt rồi thì cảnh báo thật cũng bị lướt qua.
 
         [SerializeField, Tooltip("Tỉ lệ phóng to/thu nhỏ phần hình ảnh, để mọi model khác nguồn đều vừa vặn.")]
         private float _visualScale = 1f;
@@ -75,7 +78,6 @@ namespace Survival.Config
         private int _expReward = 30;
 
         public string DisplayName => _displayName;
-        public GameObject VisualPrefab => _visualPrefab;
         public float VisualScale => _visualScale;
         public IReadOnlyList<StatModifier> BaseStats => _baseStats;
         public float AttackWindup => _attackWindup;
@@ -94,9 +96,6 @@ namespace Survival.Config
         {
             if (_attack == null)
                 Debug.LogWarning($"[{name}] chưa chọn kiểu đòn đánh — quái sẽ đuổi theo mà không bao giờ tấn công.", this);
-
-            if (_visualPrefab == null)
-                Debug.LogWarning($"[{name}] chưa gán model hiển thị.", this);
 
             foreach (EStatType required in System.Enum.GetValues(typeof(EStatType)))
             {

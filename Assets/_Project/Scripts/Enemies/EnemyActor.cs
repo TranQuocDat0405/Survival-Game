@@ -162,8 +162,14 @@ namespace Survival.Enemies
 
             // Bật lại mọi thứ đã bị tắt lúc chết. Bắt buộc phải làm vì đây là object
             // TÁI SỬ DỤNG từ pool — nó mang theo nguyên trạng thái của lần chết trước.
-            _rigidbody.velocity = Vector3.zero;
+            //
+            // THỨ TỰ HAI DÒNG NÀY QUAN TRỌNG. Lúc chết, thân vật lý bị chuyển sang kinematic
+            // để cái xác không bị trượt đi. Mà Unity KHÔNG cho đặt vận tốc lên một thân kinematic:
+            // đặt trước khi bật lại thì mỗi lần sinh quái là một dòng cảnh báo đỏ trong console.
+            // Phải trả nó về động trước, rồi mới xoá vận tốc còn sót lại từ lần chết trước.
             _rigidbody.isKinematic = false;
+            _rigidbody.velocity = Vector3.zero;
+            _rigidbody.angularVelocity = Vector3.zero;
             if (_collider != null)
                 _collider.enabled = true;
 

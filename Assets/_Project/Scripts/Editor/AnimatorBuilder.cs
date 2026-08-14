@@ -77,6 +77,14 @@ namespace Survival.EditorTools
             var controller = AnimatorController.CreateAnimatorControllerAtPath(path);
 
             controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
+
+            // Nhân tốc độ PHÁT của clip chạy. Tách riêng khỏi "Speed" là có lý do:
+            //   "Speed"          = pha trộn giữa đứng yên và chạy (0 tới 1)
+            //   "LocomotionSpeed"= clip chạy được phát nhanh chậm bao nhiêu lần
+            // Thiếu tham số thứ hai thì bước chân luôn giữ một nhịp cố định dù nhân vật
+            // đi nhanh cỡ nào — đó chính là hiện tượng trượt băng.
+            controller.AddParameter("LocomotionSpeed", AnimatorControllerParameterType.Float);
+
             controller.AddParameter("Dead", AnimatorControllerParameterType.Bool);
             controller.AddParameter("Hit", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Shoot", AnimatorControllerParameterType.Trigger);
@@ -91,6 +99,11 @@ namespace Survival.EditorTools
             var locomotion = CreateBlendTree(controller, root, "Locomotion", "Speed",
                 Get(clips, "Idle_A"), Get(clips, "Running_HoldingBow"));
             root.defaultState = locomotion;
+
+            // Cho tốc độ phát của trạng thái chạy được điều khiển bằng tham số, thay vì cố định 1.
+            // Nhờ vậy code có thể ép nhịp bước khớp với quãng đường thật sự đi được.
+            locomotion.speedParameterActive = true;
+            locomotion.speedParameter = "LocomotionSpeed";
 
             var shoot = AddState(root, "Shoot", Get(clips, "Ranged_1H_Shoot"), new Vector3(320f, -120f, 0f));
             var dash  = AddState(root, "Dash",  Get(clips, "Dodge_Forward"),   new Vector3(320f, -40f, 0f));
