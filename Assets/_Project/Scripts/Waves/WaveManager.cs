@@ -178,7 +178,9 @@ namespace Survival.Waves
                 _config.MaxSearchRadius,
                 _config.ArenaHalfExtent,
                 _camera,
-                _config.SpawnViewportMargin);
+                _config.SpawnViewportMargin,
+                blockMask: _config.SpawnBlockMask,
+                clearRadius: _config.SpawnClearRadius);
         }
 
         private Camera _camera;

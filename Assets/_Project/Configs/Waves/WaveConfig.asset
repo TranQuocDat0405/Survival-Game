@@ -26,3 +26,7 @@ MonoBehaviour:
   _delayBetweenWaves: 2
   _delayBeforeFirstWave: 2
   _extraEnemiesPerWave: 0
+  _spawnBlockMask:
+    serializedVersion: 2
+    m_Bits: 24576
+  _spawnClearRadius: 0.6

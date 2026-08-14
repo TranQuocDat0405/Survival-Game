@@ -372,6 +372,11 @@ MonoBehaviour:
   _targetMask:
     serializedVersion: 2
     m_Bits: 256
+  _obstacleMask:
+    serializedVersion: 2
+    m_Bits: 24576
+  _avoidBodyRadius: 0.45
+  _avoidProbeDistance: 1.6
   _despawnDelay: 1.35
   _collider: {fileID: 2157208773981232301}
 --- !u!114 &6068002065902928803

@@ -28,6 +28,13 @@ namespace Survival.Projectiles
         [SerializeField, Tooltip("Tự động trả về pool sau ngần này giây, phòng khi bay mãi không trúng gì.")]
         private float _maxLifeTime = 6f;
 
+        [SerializeField, Tooltip(
+            "Layer của khung cảnh chặn đạn: cây, đá tảng, tường vô hình.\n\n" +
+            "Tách riêng khỏi layer mục tiêu là có chủ ý. Layer mục tiêu trả lời câu hỏi " +
+            "'bắn trúng ai thì gây sát thương', còn cái này trả lời 'bay tới đâu thì dừng'. " +
+            "Gộp chung thì viên đạn sẽ đi tìm máu của một cái cây.")]
+        private LayerMask _environmentMask;
+
         private float _speed;
         private float _maxDistance;
         private float _travelled;
@@ -114,15 +121,17 @@ namespace Survival.Projectiles
             if (step <= 0f)
                 return false;
 
-            // SphereCastNonAlloc ghi kết quả vào mảng có sẵn thay vì cấp phát mảng mới mỗi lần gọi
-            // -> bắn liên tục cũng không sinh rác cho bộ dọn rác.
+            // Quét CẢ mục tiêu lẫn khung cảnh trong một lần, rồi mới lấy vật gần nhất.
+            // Phải làm chung một lần chứ không phải hai lần quét riêng: nếu quét riêng thì
+            // một mũi tên có cây đứng chắn trước con quái vẫn sẽ trúng con quái,
+            // vì lần quét tìm mục tiêu không hề biết có cái cây ở giữa.
             int count = Physics.SphereCastNonAlloc(
                 transform.position,
                 _radius,
                 transform.forward,
                 HitBuffer,
                 step,
-                _hitMask,
+                _hitMask | _environmentMask,
                 QueryTriggerInteraction.Collide);
 
             if (count == 0)

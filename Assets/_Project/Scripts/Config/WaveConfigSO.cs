@@ -66,7 +66,19 @@ namespace Survival.Config
             "Spec không yêu cầu tăng độ khó, nên mặc định là 0.")]
         private int _extraEnemiesPerWave = 0;
 
+        [SerializeField, Tooltip(
+            "Layer của những thứ mà quái không được sinh ra bên trong: cây, đá tảng, tường.\n\n" +
+            "Không có bước kiểm tra này thì thỉnh thoảng sẽ có con quái xuất hiện nằm lọt trong " +
+            "gốc cây. Hệ vật lý sẽ đẩy nó bật ra một cách rất kỳ quặc, hoặc tệ hơn là nó kẹt luôn " +
+            "trong đó và wave không bao giờ kết thúc vì người chơi không giết được nó.")]
+        private LayerMask _spawnBlockMask;
+
+        [SerializeField, Min(0.1f), Tooltip("Khoảng trống tối thiểu quanh điểm sinh, tính bằng unit. Nên bằng bán kính thân quái.")]
+        private float _spawnClearRadius = 0.6f;
+
         public IReadOnlyList<SpawnEntry> Entries => _entries;
+        public LayerMask SpawnBlockMask => _spawnBlockMask;
+        public float SpawnClearRadius => _spawnClearRadius;
         public float MinSpawnRadius => _minSpawnRadius;
         public float MaxSearchRadius => _maxSearchRadius;
         public float ArenaHalfExtent => _arenaHalfExtent;

@@ -59,12 +59,34 @@ namespace Survival.Player
         private Camera _camera;
         private PlayerMotor _motor;
 
+        /// <summary>
+        /// Mỗi phím phải được nhìn thấy ở trạng thái NHẢ RA ít nhất một lần thì mới được phép kích hoạt.
+        ///
+        /// Đây là bản vá cho lỗi "vừa bấm Play là nhân vật tự bắn một phát".
+        /// Nguyên nhân: người chấm bấm nút Play trên thanh công cụ Unity bằng CHUỘT TRÁI,
+        /// mà chuột trái cũng chính là phím bắn. Cú nhấn đó chưa được nhả ra khi play mode bắt đầu,
+        /// nên ở khung hình đầu tiên <c>Input.GetKeyDown(Mouse0)</c> báo true và skill khai hoả
+        /// dù người chơi chưa hề bấm gì trong game.
+        ///
+        /// Hậu quả không chỉ là một phát đạn thừa: nó tiêu mất một charge và mở luôn
+        /// khoảng chờ 0.5 giây, nên ván nào cũng bắt đầu ở trạng thái thiếu tài nguyên.
+        ///
+        /// Cách sửa là bỏ qua mọi phím đang bị giữ sẵn từ TRƯỚC khi vào game.
+        /// Trên bản build thì không có phím nào bị giữ lúc màn chơi mở ra,
+        /// nên mọi phím đều sẵn sàng ngay từ khung hình đầu — không mất gì cả.
+        /// </summary>
+        private bool[] _primaryArmed;
+        private bool[] _alternateArmed;
+
         private void Awake()
         {
             if (_player == null)
                 _player = GetComponent<PlayerActor>();
 
             _motor = GetComponent<PlayerMotor>();
+
+            _primaryArmed = new bool[_skillKeys.Length];
+            _alternateArmed = new bool[_alternateKeys.Length];
         }
 
         /// <summary>
@@ -110,6 +132,11 @@ namespace Survival.Player
             if (_player == null)
                 return;
 
+            // Cập nhật trạng thái "đã nhả ra chưa" TRƯỚC mọi lần thoát sớm bên dưới.
+            // Nếu để sau, một ngón tay đang đè lên nút UI sẽ khiến hàm thoát sớm mãi
+            // và phím không bao giờ được ghi nhận là đã nhả — bấm cách mấy cũng không bắn được.
+            UpdateArming();
+
             // Khi ngón tay / con trỏ đang đè lên một nút UI thì bỏ qua bàn phím và chuột.
             // Nếu không, một cú bấm vào nút kỹ năng sẽ được tính HAI lần:
             // một lần do nút UI nhận, một lần do chuột trái ở đây.
@@ -148,16 +175,30 @@ namespace Survival.Player
             return false;
         }
 
+        /// <summary>
+        /// Ghi nhận phím nào đã được nhả ra. Phím chỉ "sẵn sàng" sau khi thấy nó ở trạng thái nhả.
+        /// </summary>
+        private void UpdateArming()
+        {
+            for (int i = 0; i < _skillKeys.Length; i++)
+                if (_skillKeys[i] != KeyCode.None && !Input.GetKey(_skillKeys[i]))
+                    _primaryArmed[i] = true;
+
+            for (int i = 0; i < _alternateKeys.Length; i++)
+                if (_alternateKeys[i] != KeyCode.None && !Input.GetKey(_alternateKeys[i]))
+                    _alternateArmed[i] = true;
+        }
+
         private bool IsTriggered(int index)
         {
             KeyCode primary = _skillKeys[index];
-            if (primary != KeyCode.None && IsPressed(primary))
+            if (primary != KeyCode.None && _primaryArmed[index] && IsPressed(primary))
                 return true;
 
             if (index < _alternateKeys.Length)
             {
                 KeyCode alternate = _alternateKeys[index];
-                if (alternate != KeyCode.None && IsPressed(alternate))
+                if (alternate != KeyCode.None && _alternateArmed[index] && IsPressed(alternate))
                     return true;
             }
 

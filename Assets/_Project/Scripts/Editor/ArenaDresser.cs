@@ -8,15 +8,33 @@ namespace Survival.EditorTools
     /// Rải cây cỏ đá trang trí quanh đấu trường.
     ///
     /// Dựng bằng code thay vì kéo thả từng cái vì hai lý do:
-    ///   - Rải tay vài trăm vật thể vừa lâu vừa dễ để lọt một cái vào giữa sân,
+    ///   - Rải tay vài nghìn vật thể vừa lâu vừa dễ để lọt một cái vào giữa sân,
     ///     và cái đó sẽ che khuất tầm nhìn đúng lúc đang đánh nhau.
     ///   - Chạy lại lệnh này là ra cùng một kết quả (dùng hạt ngẫu nhiên cố định),
     ///     nên chỉnh mật độ hay bán kính rồi chạy lại là xong, không phải dọn tay.
     ///
-    /// LUẬT QUAN TRỌNG: mọi vật trang trí đều bị GỠ HẾT COLLIDER.
-    /// AI của quái đi thẳng tới player chứ không tìm đường vòng (xem ghi chú về NavMesh
-    /// trong README nộp bài). Nếu cây có va chạm, quái sẽ húc vào gốc cây rồi đứng đó rung.
-    /// Đấu trường thông thoáng là điều kiện để kiểu AI này hoạt động đúng.
+    /// ==================== LUẬT VA CHẠM ====================
+    /// Vật trang trí chia làm HAI LOẠI, và đây là quyết định thiết kế quan trọng nhất file này:
+    ///
+    ///   VẬT ĐẶC   — cây, đá tảng, thân cây đổ, gốc cây.
+    ///               Có va chạm, nằm ở layer Obstacle. Người chơi, quái và ĐẠN đều bị chặn.
+    ///
+    ///   VẬT LẶT VẶT — cỏ, hoa, cánh hoa rụng, sỏi, bụi thấp, đá lát đường.
+    ///               Không va chạm. Đi xuyên qua được, và đó mới là điều người chơi mong đợi:
+    ///               không ai muốn bị một nhánh cỏ chặn đường.
+    ///
+    /// Cây dùng CAPSULE BÓ SÁT THÂN chứ không bọc cả tán lá (xem <see cref="TrunkRadiusFactor"/>).
+    /// Nếu bọc cả tán, người chơi sẽ bị chặn từ cách gốc cây mấy unit — cảm giác như đâm vào
+    /// tường vô hình, rất khó chịu và không ai hiểu vì sao.
+    ///
+    /// Vì đã có vật cản nên quái BẮT BUỘC phải biết né. Phần đó nằm ở
+    /// <c>EnemyActor.MoveTowardsTarget</c>: quái dò một tia hình cầu phía trước, gặp vật cản
+    /// thì trượt vòng qua. Không có nó thì quái húc thẳng vào gốc cây rồi đứng rung tại chỗ.
+    ///
+    /// Mật độ cây ở vành rừng được tính để rừng ĐI XUYÊN QUA ĐƯỢC chứ không thành mê cung:
+    /// khoảng 300 cây trải trên vành khuyên rộng ~1400 unit vuông, tức mỗi cây chiếm ~4.8 unit vuông,
+    /// khoảng cách trung bình giữa hai gốc ~2.2 unit. Thân cây bán kính ~0.3 nên khe hở còn ~1.6 unit,
+    /// rộng hơn người chơi (đường kính ~1.0). Nhờ vậy không bao giờ có túi cụt nhốt người chơi lại.
     ///
     /// Chạy qua menu: Survival > Dress Arena.
     /// </summary>
@@ -25,7 +43,10 @@ namespace Survival.EditorTools
         private const string NatureFolder = "Assets/_Project/Art/Environment/Nature";
         private const string ContainerName = "--- Decor ---";
 
-        /// <summary>Bán kính vùng chơi để trống hoàn toàn. Không đặt gì bên trong.</summary>
+        /// <summary>Layer Obstacle. Khớp với ma trận va chạm: chặn Player, Enemy và cả hai loại đạn.</summary>
+        private const int ObstacleLayer = 14;
+
+        /// <summary>Bán kính vùng chơi. Bên trong chỉ có vật thấp, và rất ít vật đặc.</summary>
         private const float PlayableRadius = 21f;
 
         /// <summary>Nửa cạnh sân, trùng với tường vô hình.</summary>
@@ -42,6 +63,57 @@ namespace Survival.EditorTools
         /// </summary>
         private const float ForestOuterRadius = 46f;
 
+        /// <summary>
+        /// Ngoài khoảng này thì cây chỉ còn là hình nền, không gắn va chạm nữa.
+        ///
+        /// Tường vô hình nằm ở 30 nên người chơi không bao giờ ra tới đó được.
+        /// Gắn va chạm cho vài trăm cây mà không ai chạm tới chỉ tốn bộ nhớ
+        /// và tốn thời gian dựng cây va chạm lúc mở màn.
+        /// </summary>
+        private const float ColliderCutoffRadius = 32f;
+
+        /// <summary>
+        /// Bán kính thân cây, tính theo phần trăm bề ngang cả tán.
+        ///
+        /// Đây là con số quan trọng nhất về mặt cảm giác chơi. Cây cao 10 unit thì tán rộng
+        /// khoảng 6 unit nhưng thân chỉ khoảng 0.8. Lấy 14% của nửa bề ngang cho ra
+        /// đúng cỡ cái thân — người chơi lách được giữa hai gốc cây, và chỉ bị chặn
+        /// khi thật sự đâm vào thân, đúng như những gì mắt nhìn thấy.
+        /// </summary>
+        private const float TrunkRadiusFactor = 0.14f;
+
+        /// <summary>
+        /// Đá và gỗ thì đặc gần hết khối, chỉ thu BỀ NGANG vào một chút cho đỡ vướng ở góc.
+        ///
+        /// Chỉ thu ngang, KHÔNG thu chiều cao. Thu cả chiều cao thì khối va chạm thấp hơn hình
+        /// mà mắt nhìn thấy, và mũi tên sẽ bay lọt qua ngay bên trên một tảng đá trông rất đặc.
+        /// Đo được lúc trước: đá cao 0.34 nhưng đỉnh khối va chạm chỉ tới 0.28.
+        /// </summary>
+        private const float SolidShrinkFactor = 0.82f;
+
+        /// <summary>
+        /// Độ cao tối thiểu của vật cản đặt trong vùng chơi.
+        ///
+        /// Đầu nỏ của nhân vật nằm ở độ cao 0.75, nên bất cứ thứ gì thấp hơn mức đó
+        /// đều bị mũi tên bay vượt qua bên trên — đúng về mặt vật lý, nhưng người chơi
+        /// nhìn vào chỉ thấy "bắn xuyên qua tảng đá" và cho là lỗi.
+        ///
+        /// Ép mọi vật cản trong sân cao hơn đầu nỏ thì luật trở nên nhất quán và dễ đoán:
+        /// đã chặn được người thì cũng chặn được đạn. Vẫn thấp hơn nhiều so với nhân vật
+        /// cao 1.4 nên không bao giờ che khuất được con quái đứng sau.
+        /// </summary>
+        private const float MinSolidHeightInPlayArea = 0.85f;
+
+        /// <summary>
+        /// Đếm số vật đã gắn va chạm, chỉ để in ra dòng tổng kết cuối cùng.
+        ///
+        /// Dùng biến tĩnh thay vì truyền tham số qua từng hàm: đây là công cụ Editor chạy
+        /// một mạch trên một luồng, và nếu nhét thêm một tham số đếm vào mọi hàm rải
+        /// thì danh sách tham số dài ra mà chẳng nói thêm được gì về việc rải cây.
+        /// Được đặt lại về 0 ở đầu mỗi lần chạy.
+        /// </summary>
+        private static int _solidCount;
+
         [MenuItem("Survival/Dress Arena")]
         public static void Dress()
         {
@@ -57,6 +129,10 @@ namespace Survival.EditorTools
             // Hạt cố định để mỗi lần chạy ra cùng một khu rừng.
             Random.InitState(20260813);
 
+            // Xoá bộ nhớ đệm chiều cao: sau khi đổi thiết lập nhập model thì cỡ thật đổi theo,
+            // giữ lại số cũ sẽ tính ra hệ số sai mà không hề có dấu hiệu gì.
+            NaturalHeightCache.Clear();
+
             // Tiền tố phải khớp CHÍNH XÁC tên file. Trước đây lọc "PineTree_" trong khi
             // file thật tên là "Pine_", nên toàn bộ 5 cây thông bị bỏ sót mà không có
             // lỗi nào báo ra — vành rừng vì thế chỉ có mỗi một dáng cây.
@@ -69,12 +145,28 @@ namespace Survival.EditorTools
             var deadTrees = LoadAll("DeadTree_");
             var bushes = LoadAll("Bush_", "Fern_", "Plant_");
             var grass = LoadAll("Grass_", "Clover_");
-            var rocks = LoadAll("Rock_", "Pebble_");
-            var flowers = LoadAll("Flower_", "Mushroom_");
+            var pebbles = LoadAll("Rock_Medium", "Pebble_");
+            // Hoa và nấm phải TÁCH RIÊNG dù cùng là chi tiết nhỏ trên mặt đất.
+            // Vì bây giờ kích thước được đặt theo CHIỀU CAO, mọi thứ trong cùng một pool
+            // sẽ cao bằng nhau. Mà cỡ tự nhiên của chúng chênh nhau năm lần
+            // (khóm hoa 2.05–2.49, cây nấm 0.46–0.77), nên gộp chung sẽ cho ra
+            // những cây nấm to ngang khóm hoa — nhìn ra ngay là sai tỉ lệ.
+            var flowers = LoadAll("Flower_");
+            var mushrooms = LoadAll("Mushroom_");
             var petals = LoadAll("Petal_");
             var pathStones = LoadAll("RockPath_");
 
+            // Bộ vật thể bổ sung, lấy từ Ultimate Nature Pack.
+            // Vùng giữa sân trước đây chỉ có cỏ và sỏi nên nhìn rất trống, mà lại không thể
+            // trồng cây vào đó (cây cao sẽ che mất quái). Thân cây đổ, gốc cây và đá phủ rêu
+            // giải đúng bài toán này: chúng THẤP nên không che tầm nhìn, nhưng lại ĐỦ TO
+            // để mắt đọc ra là một vật thể thật, và đủ đặc để làm chỗ nấp.
+            var logs = LoadAll("WoodLog", "TreeStump");
+            var mossyRocks = LoadAll("Rock_Moss_");
+            var berryBushes = LoadAll("BushBerries_");
+
             int placed = 0;
+            _solidCount = 0;
 
             // ------------------------------------------------------------------
             // TỈ LỆ Ở ĐÂY ĐƯỢC TÍNH THEO CHIỀU CAO NHÂN VẬT (khoảng 1.4 unit).
@@ -84,7 +176,7 @@ namespace Survival.EditorTools
             // và che mất con quái đang lao tới — người chơi ăn đòn mà không hiểu từ đâu.
             //
             // NGUYÊN TẮC BỐ CỤC (học từ map trong video tham chiếu):
-            //   - Vùng đánh nhau ở giữa: chỉ có thứ THẤP hơn đầu gối nhân vật.
+            //   - Vùng đánh nhau ở giữa: chỉ có thứ THẤP hơn thắt lưng nhân vật.
             //   - Càng ra xa tâm, cây cỏ càng cao và càng dày, tạo thành khung bao quanh.
             //   - Rải theo CỤM chứ không rải đều, vì thiên nhiên thật không mọc đều tăm tắp;
             //     rải đều cho ra cảm giác lốm đốm nhân tạo.
@@ -97,20 +189,33 @@ namespace Survival.EditorTools
             // đọc được, nói rõ tới đây là hết sân — quan trọng vì tường thật thì vô hình.
             // Lớp ngoài thưa dần và trải rất xa, để khi nhìn về phía chân trời thấy rừng
             // kéo dài chứ không phải một vành cây rồi hết.
-            placed += ScatterRing(container.transform, bigTrees, count: 300, inner: PlayableRadius + 1.5f, outer: ArenaHalfExtent + 1f, scaleMin: 0.28f, scaleMax: 0.48f);
-            placed += ScatterRing(container.transform, bigTrees, count: 320, inner: ArenaHalfExtent, outer: ForestOuterRadius, scaleMin: 0.30f, scaleMax: 0.55f);
-            placed += ScatterRing(container.transform, deadTrees, count: 55, inner: PlayableRadius + 2f, outer: ForestOuterRadius - 6f, scaleMin: 0.22f, scaleMax: 0.38f);
+            placed += ScatterRing(container.transform, bigTrees, count: 300, inner: PlayableRadius + 1.5f, outer: ArenaHalfExtent + 1f, minHeight: 2.2f, maxHeight: 3.6f, solid: true);
+            placed += ScatterRing(container.transform, bigTrees, count: 320, inner: ArenaHalfExtent, outer: ForestOuterRadius, minHeight: 2.6f, maxHeight: 4.5f, solid: true);
+            placed += ScatterRing(container.transform, deadTrees, count: 55, inner: PlayableRadius + 2f, outer: ForestOuterRadius - 6f, minHeight: 1.8f, maxHeight: 3.0f, solid: true);
 
             // Cây lá đỏ rải thưa làm điểm nhấn, khoảng một phần mười số cây xanh.
-            placed += ScatterRing(container.transform, accentTrees, count: 62, inner: PlayableRadius + 2f, outer: ForestOuterRadius - 4f, scaleMin: 0.28f, scaleMax: 0.46f);
+            placed += ScatterRing(container.transform, accentTrees, count: 62, inner: PlayableRadius + 2f, outer: ForestOuterRadius - 4f, minHeight: 2.2f, maxHeight: 3.6f, solid: true);
 
             // Bụi cây lấp chân rừng, để giữa gốc cây và mặt cỏ không bị hở một khoảng trống.
-            placed += ScatterRing(container.transform, bushes, count: 240, inner: PlayableRadius - 0.5f, outer: ArenaHalfExtent + 8f, scaleMin: 0.28f, scaleMax: 0.62f);
+            // KHÔNG có va chạm: bụi thấp thì người chơi lướt qua được, chặn lại sẽ rất bực.
+            // Bắt đầu từ NGOÀI mép vùng chơi, vì chúng cao tới 1.0 — vượt ngưỡng 0.65 dành cho vùng đánh nhau.
+            placed += ScatterRing(container.transform, bushes, count: 240, inner: PlayableRadius + 0.5f, outer: ArenaHalfExtent + 8f, minHeight: 0.5f, maxHeight: 1.0f, solid: false);
 
-            // ĐÁ LỚN LÀM MỐC. Đặt ở vành ngoài vùng chơi chứ không phải giữa sân:
-            // chúng không có va chạm nên quái sẽ đi xuyên qua, mà chỗ ít đánh nhau nhất
-            // là chỗ điều đó khó bị để ý nhất.
-            placed += ScatterRing(container.transform, rocks, count: 26, inner: PlayableRadius - 5f, outer: PlayableRadius + 3f, scaleMin: 0.55f, scaleMax: 1.05f);
+            // ĐÁ LỚN LÀM MỐC ở vành ngoài vùng chơi. Giờ chúng ĐẶC, nên vừa là mốc định vị
+            // vừa là chỗ nấp thật sự khi bị quái vây.
+            placed += ScatterLandmarks(container.transform, mossyRocks, count: 26, inner: PlayableRadius - 5f, outer: PlayableRadius + 3f, minSpacing: 4.5f, minHeight: MinSolidHeightInPlayArea, maxHeight: 1.15f);
+
+            // ---------- VÙNG GIỮA SÂN ----------
+            // Trước đây chỗ này gần như trống, chỉ có cỏ và sỏi vụn nên nhìn như một bãi cỏ
+            // chưa làm xong. Bổ sung theo hai hướng: nhiều chi tiết nhỏ hơn để mặt đất có gì mà nhìn,
+            // và vài vật thể ĐẶC cỡ vừa để sân có cấu trúc chứ không phải một mặt phẳng rỗng.
+
+            // Thân cây đổ và gốc cây: thấp (~0.6 unit) nên không che quái, nhưng đủ to để làm mốc.
+            // Giãn cách tối thiểu 6 unit để chúng không bao giờ chụm lại thành hàng rào nhốt người chơi.
+            placed += ScatterLandmarks(container.transform, logs, count: 13, inner: 6.5f, outer: PlayableRadius - 2f, minSpacing: 6f, minHeight: MinSolidHeightInPlayArea, maxHeight: 1.05f);
+
+            // Đá phủ rêu cỡ vừa, rải xen giữa để sân không chỉ có mỗi gỗ.
+            placed += ScatterLandmarks(container.transform, mossyRocks, count: 14, inner: 6f, outer: PlayableRadius - 2f, minSpacing: 5.5f, minHeight: MinSolidHeightInPlayArea, maxHeight: 1.10f);
 
             // CON ĐƯỜNG LÁT ĐÁ vắt ngang sân.
             // Đây là thứ tạo khác biệt lớn nhất giữa "một bãi cỏ có rải cây" và "một map game".
@@ -122,18 +227,27 @@ namespace Survival.EditorTools
             // Trong vùng chơi rải theo CỤM: mỗi cụm là một nhúm cỏ hoa mọc quây quần,
             // giữa các cụm là khoảng đất trống. Mắt đọc ra ngay là cỏ mọc tự nhiên,
             // khác hẳn kiểu rải đều cho cảm giác lốm đốm như bụi bẩn trên màn hình.
-            placed += ScatterClusters(container.transform, grass, clusters: 150, perCluster: 8, clusterRadius: 1.7f, areaRadius: PlayableRadius, scaleMin: 0.18f, scaleMax: 0.36f);
-            placed += ScatterClusters(container.transform, flowers, clusters: 75, perCluster: 6, clusterRadius: 1.3f, areaRadius: PlayableRadius, scaleMin: 0.16f, scaleMax: 0.32f);
-            placed += ScatterDisc(container.transform, rocks, count: 150, radius: PlayableRadius, scaleMin: 0.12f, scaleMax: 0.26f);
+            // MỌI CHIỀU CAO DƯỚI ĐÂY ĐỀU PHẢI ≤ 0.65 — ngưỡng của vùng đánh nhau.
+            // Và chúng phải chênh nhau rõ rệt: cỏ cao hơn hoa, hoa cao hơn nấm, nấm cao hơn sỏi.
+            // Nếu mọi thứ cao xấp xỉ nhau thì mặt sân thành một thảm đều tăm tắp,
+            // mắt không còn phân biệt được cái gì với cái gì.
+            placed += ScatterClusters(container.transform, grass, clusters: 240, perCluster: 8, clusterRadius: 1.7f, areaRadius: PlayableRadius, minHeight: 0.30f, maxHeight: 0.55f);
+            placed += ScatterClusters(container.transform, flowers, clusters: 120, perCluster: 6, clusterRadius: 1.3f, areaRadius: PlayableRadius, minHeight: 0.28f, maxHeight: 0.48f);
+            placed += ScatterClusters(container.transform, mushrooms, clusters: 45, perCluster: 4, clusterRadius: 0.9f, areaRadius: PlayableRadius, minHeight: 0.10f, maxHeight: 0.20f);
+
+            // Bụi mọng thấp rải quanh các mốc, thêm chút màu khác cho đỡ đơn điệu một tông xanh.
+            placed += ScatterClusters(container.transform, berryBushes, clusters: 34, perCluster: 3, clusterRadius: 1.6f, areaRadius: PlayableRadius - 1f, minHeight: 0.35f, maxHeight: 0.55f);
+
+            // Sỏi vụn phải THẬT nhỏ. Đây là hạt rải trên mặt đất, không phải đá tảng —
+            // để cao 0.2 thì cả sân đầy những cục đá xám cỡ bằng cái mũ.
+            placed += ScatterDisc(container.transform, pebbles, count: 240, radius: PlayableRadius, minHeight: 0.02f, maxHeight: 0.05f);
 
             // Cánh hoa rụng nằm sát đất, gần như phẳng. Chúng thêm chi tiết cho mặt sân
             // mà tuyệt đối không che được thứ gì, nên rải thoải mái.
-            placed += ScatterClusters(container.transform, petals, clusters: 60, perCluster: 9, clusterRadius: 1.1f, areaRadius: PlayableRadius, scaleMin: 0.20f, scaleMax: 0.40f);
-
-            StripColliders(container);
+            placed += ScatterClusters(container.transform, petals, clusters: 95, perCluster: 9, clusterRadius: 1.1f, areaRadius: PlayableRadius, minHeight: 0.05f, maxHeight: 0.11f);
 
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
-            Debug.Log($"[ArenaDresser] Đã đặt {placed} vật trang trí, tất cả đều không có va chạm.");
+            Debug.Log($"[ArenaDresser] Đã đặt {placed} vật trang trí, trong đó {_solidCount} vật có va chạm (layer Obstacle).");
         }
 
         private static List<GameObject> LoadAll(params string[] prefixes)
@@ -161,7 +275,8 @@ namespace Survival.EditorTools
         }
 
         /// <summary>Rải trong một vành khuyên, dùng cho cây to bao quanh sân.</summary>
-        private static int ScatterRing(Transform parent, List<GameObject> pool, int count, float inner, float outer, float scaleMin, float scaleMax)
+        private static int ScatterRing(Transform parent, List<GameObject> pool, int count, float inner, float outer,
+            float minHeight, float maxHeight, bool solid)
         {
             if (pool.Count == 0)
                 return 0;
@@ -177,14 +292,22 @@ namespace Survival.EditorTools
                 float radius = Mathf.Lerp(inner, outer, t);
 
                 var position = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
-                if (Place(parent, pool, position, scaleMin, scaleMax))
-                    placed++;
+
+                var instance = Place(parent, pool, position, minHeight, maxHeight);
+                if (instance == null)
+                    continue;
+
+                placed++;
+
+                // Chỉ gắn va chạm cho cây nằm trong tầm với của người chơi.
+                if (solid && radius <= ColliderCutoffRadius && AddTrunkBlocker(instance))
+                    _solidCount++;
             }
             return placed;
         }
 
         /// <summary>Rải trong một hình tròn đặc, dùng cho cỏ và sỏi trong vùng chơi.</summary>
-        private static int ScatterDisc(Transform parent, List<GameObject> pool, int count, float radius, float scaleMin, float scaleMax)
+        private static int ScatterDisc(Transform parent, List<GameObject> pool, int count, float radius, float minHeight, float maxHeight)
         {
             if (pool.Count == 0)
                 return 0;
@@ -201,9 +324,65 @@ namespace Survival.EditorTools
                 if (position.magnitude < 3f)
                     continue;
 
-                if (Place(parent, pool, position, scaleMin, scaleMax))
+                if (Place(parent, pool, position, minHeight, maxHeight) != null)
                     placed++;
             }
+            return placed;
+        }
+
+        /// <summary>
+        /// Đặt các vật thể ĐẶC làm mốc, có giãn cách tối thiểu giữa chúng.
+        ///
+        /// Giãn cách là bắt buộc chứ không phải cho đẹp: hai tảng đá đặt sát nhau tạo thành
+        /// một khe hẹp, và quái đuổi theo người chơi sẽ kẹt ở đó. Ép khoảng cách tối thiểu
+        /// lớn hơn hẳn bề ngang một con quái thì không bao giờ sinh ra khe như vậy.
+        /// </summary>
+        private static int ScatterLandmarks(Transform parent, List<GameObject> pool, int count,
+            float inner, float outer, float minSpacing, float minHeight, float maxHeight)
+        {
+            if (pool.Count == 0)
+                return 0;
+
+            // Chặn ngay tại đây thay vì tin vào con số bên gọi truyền xuống.
+            // Mọi vật đi qua hàm này đều là vật ĐẶC, nên đều phải cao hơn đầu nỏ —
+            // nếu không thì nó chặn được người mà không chặn được đạn, và luật trở nên khó đoán.
+            minHeight = Mathf.Max(minHeight, MinSolidHeightInPlayArea);
+            maxHeight = Mathf.Max(maxHeight, minHeight);
+
+            var taken = new List<Vector3>(count);
+            int placed = 0;
+            int guard = count * 40;   // trần số lần thử, tránh lặp vô hạn khi chỗ đã chật
+
+            while (placed < count && guard-- > 0)
+            {
+                float angle = Random.Range(0f, Mathf.PI * 2f);
+                float t = Mathf.Sqrt(Random.value);
+                float radius = Mathf.Lerp(inner, outer, t);
+                var position = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
+
+                bool tooClose = false;
+                for (int i = 0; i < taken.Count; i++)
+                {
+                    if ((taken[i] - position).sqrMagnitude < minSpacing * minSpacing)
+                    {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (tooClose)
+                    continue;
+
+                var instance = Place(parent, pool, position, minHeight, maxHeight);
+                if (instance == null)
+                    continue;
+
+                taken.Add(position);
+                placed++;
+
+                if (AddSolidBlocker(instance))
+                    _solidCount++;
+            }
+
             return placed;
         }
 
@@ -261,8 +440,11 @@ namespace Survival.EditorTools
                 // chứ không phải vừa được đặt lên trên mặt cỏ.
                 instance.transform.position = point + Vector3.down * 0.04f;
                 instance.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-                instance.transform.localScale = Vector3.one * Random.Range(0.30f, 0.52f);
+                // Đá lát phải gần như phẳng. Đây là mặt đường nhìn từ trên xuống,
+                // để dày lên là thành một hàng đá tảng chắn ngang sân.
+                ScaleToHeight(instance, prefab, 0.03f, 0.07f);
                 instance.isStatic = true;
+                StripColliders(instance);
                 placed++;
             }
 
@@ -278,7 +460,7 @@ namespace Survival.EditorTools
         /// và chính khoảng trống giữa các cụm mới làm nổi bật cụm cỏ lên.
         /// </summary>
         private static int ScatterClusters(Transform parent, List<GameObject> pool,
-            int clusters, int perCluster, float clusterRadius, float areaRadius, float scaleMin, float scaleMax)
+            int clusters, int perCluster, float clusterRadius, float areaRadius, float minHeight, float maxHeight)
         {
             if (pool.Count == 0)
                 return 0;
@@ -306,7 +488,7 @@ namespace Survival.EditorTools
                     if (position.magnitude > areaRadius)
                         continue;
 
-                    if (Place(parent, pool, position, scaleMin, scaleMax))
+                    if (Place(parent, pool, position, minHeight, maxHeight) != null)
                         placed++;
                 }
             }
@@ -314,28 +496,222 @@ namespace Survival.EditorTools
             return placed;
         }
 
-        private static bool Place(Transform parent, List<GameObject> pool, Vector3 position, float scaleMin, float scaleMax)
+        /// <summary>
+        /// Dựng một vật trang trí. Mặc định KHÔNG có va chạm — bên gọi tự quyết định
+        /// có gắn thêm hay không. Cách này an toàn hơn mặc định ngược lại: quên gắn va chạm
+        /// thì chỉ là đi xuyên qua một cục đá, còn quên gỡ va chạm thì cả bãi cỏ thành tường.
+        /// </summary>
+        private static GameObject Place(Transform parent, List<GameObject> pool, Vector3 position, float minHeight, float maxHeight)
         {
             var prefab = pool[Random.Range(0, pool.Count)];
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
             if (instance == null)
-                return false;
+                return null;
 
             instance.transform.position = position;
 
             // Xoay ngẫu nhiên quanh trục đứng và đổi kích thước một chút, để cùng một model
             // lặp lại hàng chục lần mà mắt không nhận ra là đồ sao chép.
             instance.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-            instance.transform.localScale = Vector3.one * Random.Range(scaleMin, scaleMax);
+            ScaleToHeight(instance, prefab, minHeight, maxHeight);
+            AlignToGround(instance);
             instance.isStatic = true;
 
+            // Model gốc có thể mang sẵn collider bọc cả khối. Gỡ sạch rồi tự dựng lại
+            // theo đúng hình dạng mình muốn, thay vì phải đoán xem bộ asset đã đặt gì trong đó.
+            StripColliders(instance);
+
+            return instance;
+        }
+
+        /// <summary>
+        /// Đổi kích thước bằng cách nói rõ MUỐN CAO BAO NHIÊU UNIT, không phải bằng hệ số nhân.
+        ///
+        /// ĐÂY LÀ CHỖ ĐÃ SAI HAI LẦN LIỀN, và cách sửa mới là cách duy nhất chặn được tận gốc.
+        ///
+        /// Lần một: hàm này gán thẳng <c>localScale = 0.55</c>. Cách đó chỉ đúng khi model có
+        /// scale gốc bằng 1. Bộ Stylized Nature đúng như vậy nên chạy tốt suốt. Nhưng bộ
+        /// Ultimate Nature xuất mesh theo đơn vị xăng-ti-mét: mesh chỉ to 0.005 unit và node gốc
+        /// mang sẵn scale 100 để bù lại. Gán đè 0.55 lên đó đã XOÁ MẤT con số 100, và mấy tảng đá
+        /// bị thu về một phần trăm — to bằng hạt đậu. Cả cụm vật cản coi như không tồn tại,
+        /// mà không hề có lỗi nào báo ra.
+        ///
+        /// Lần hai: chuyển sang NHÂN vào scale gốc thì hết bị thu nhỏ, nhưng vẫn sai cỡ,
+        /// vì hệ số nhân chỉ có nghĩa khi mọi model trong cùng một nhóm to xấp xỉ nhau.
+        /// Thực tế đo được thì không: nhóm <c>Plant</c> có model cao 0.25 và model cao 3.76,
+        /// chênh nhau mười lăm lần. Cùng một hệ số cho ra cái thì tí xíu, cái thì che kín màn hình.
+        ///
+        /// Cách làm hiện tại: đo chiều cao thật của model rồi tính ngược ra hệ số cần thiết.
+        /// Nhờ vậy luật "trong vùng chơi không có gì cao quá 0.65 unit" được bảo đảm BẰNG CẤU TRÚC —
+        /// muốn vi phạm cũng không được — thay vì phải tin rằng hệ số đã chọn là đúng.
+        /// Thêm một bộ asset lạ với quy ước đơn vị bất kỳ cũng không cần chỉnh gì.
+        /// </summary>
+        private static void ScaleToHeight(GameObject instance, GameObject prefab, float minHeight, float maxHeight)
+        {
+            float natural = GetNaturalHeight(prefab);
+
+            Vector3 nativeScale = prefab.transform.localScale;
+            if (nativeScale.sqrMagnitude < 0.000001f)
+                nativeScale = Vector3.one;
+
+            // Model không có mesh (hoặc mesh phẳng tuyệt đối) thì không suy ra được hệ số,
+            // giữ nguyên cỡ gốc còn hơn là chia cho số không.
+            float factor = natural > 0.0001f
+                ? Random.Range(minHeight, maxHeight) / natural
+                : 1f;
+
+            instance.transform.localScale = nativeScale * factor;
+        }
+
+        /// <summary>
+        /// Hạ vật xuống cho ĐÁY CHẠM MẶT ĐẤT.
+        ///
+        /// Không phải model nào cũng đặt điểm gốc dưới chân. Bộ Stylized Nature thì có,
+        /// nên đặt ở y = 0 là cây đứng đúng trên mặt cỏ. Nhưng bộ Ultimate Nature lại đặt điểm gốc
+        /// ở GIỮA KHỐI, nên cùng cách đặt đó khiến tảng đá chôn mất một nửa xuống đất:
+        /// đo được đáy nằm ở y = −0.58 trong khi đỉnh chỉ tới y = 0.41.
+        ///
+        /// Hệ quả không chỉ là xấu. Đầu nỏ nằm ở độ cao 0.75, nên một tảng đá "cao 0.99"
+        /// mà thực tế chỉ nhô lên 0.41 sẽ để mũi tên bay lọt qua bên trên — nhìn ra đúng như
+        /// bắn xuyên qua đá. Chính chỗ này đã làm phép thử chặn đạn thất bại.
+        ///
+        /// Lún nhẹ một chút là cố ý: để hở đúng bằng 0 thì mặt đáy và mặt đất trùng khít nhau,
+        /// và card đồ hoạ không quyết được nên vẽ mặt nào trước, sinh ra vệt nhấp nháy.
+        /// </summary>
+        private static void AlignToGround(GameObject instance, float sink = 0.02f)
+        {
+            var renderers = instance.GetComponentsInChildren<MeshRenderer>();
+            if (renderers.Length == 0)
+                return;
+
+            var bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+                bounds.Encapsulate(renderers[i].bounds);
+
+            instance.transform.position += Vector3.up * (-bounds.min.y - sink);
+        }
+
+        /// <summary>
+        /// Chiều cao thật của model khi đặt vào cảnh, tính bằng unit.
+        ///
+        /// Phải tự nhân dồn scale theo cả chuỗi cha–con chứ KHÔNG dùng <c>Renderer.bounds</c>:
+        /// với một prefab chưa được đặt vào cảnh, <c>bounds</c> trả về số không đáng tin.
+        /// Chính chỗ này đã làm tôi đọc ra WoodLog cao 0.75 trong khi cỡ thật của nó là 2.67.
+        ///
+        /// Kết quả được nhớ lại vì hàm rải gọi tới nó vài nghìn lần trong một lượt dựng,
+        /// mà số model gốc thì chỉ vài chục.
+        /// </summary>
+        private static float GetNaturalHeight(GameObject prefab)
+        {
+            if (NaturalHeightCache.TryGetValue(prefab, out float cached))
+                return cached;
+
+            float height = 0f;
+
+            foreach (var filter in prefab.GetComponentsInChildren<MeshFilter>())
+            {
+                if (filter.sharedMesh == null)
+                    continue;
+
+                float chain = 1f;
+                var node = filter.transform;
+                while (node != null)
+                {
+                    chain *= node.localScale.y;
+                    node = node.parent;
+                }
+
+                height = Mathf.Max(height, filter.sharedMesh.bounds.size.y * chain);
+            }
+
+            NaturalHeightCache[prefab] = height;
+            return height;
+        }
+
+        private static readonly Dictionary<GameObject, float> NaturalHeightCache = new Dictionary<GameObject, float>();
+
+        /// <summary>Va chạm bó sát THÂN cây: một cột đứng mảnh xuyên giữa tán lá.</summary>
+        private static bool AddTrunkBlocker(GameObject instance)
+        {
+            if (!TryComputeLocalBounds(instance, out Bounds local))
+                return false;
+
+            var capsule = instance.AddComponent<CapsuleCollider>();
+            capsule.direction = 1;   // trục Y
+            capsule.center = local.center;
+            capsule.radius = Mathf.Max(local.extents.x, local.extents.z) * TrunkRadiusFactor;
+            capsule.height = local.size.y;
+
+            instance.layer = ObstacleLayer;
+            return true;
+        }
+
+        /// <summary>Va chạm bọc gần hết khối, dùng cho đá tảng, thân cây đổ, gốc cây.</summary>
+        private static bool AddSolidBlocker(GameObject instance)
+        {
+            if (!TryComputeLocalBounds(instance, out Bounds local))
+                return false;
+
+            var box = instance.AddComponent<BoxCollider>();
+            box.center = local.center;
+            box.size = new Vector3(
+                local.size.x * SolidShrinkFactor,
+                local.size.y,                       // giữ nguyên chiều cao, xem ghi chú ở SolidShrinkFactor
+                local.size.z * SolidShrinkFactor);
+
+            instance.layer = ObstacleLayer;
             return true;
         }
 
         /// <summary>
-        /// Gỡ toàn bộ collider của phần trang trí.
-        /// Đây không phải bước dọn dẹp cho gọn mà là YÊU CẦU để AI hoạt động đúng.
+        /// Tính khung bao của model TRONG HỆ TRỤC CỦA CHÍNH NÓ.
+        ///
+        /// Không dùng <c>Renderer.bounds</c> được: cái đó là khung bao thẳng trục THẾ GIỚI,
+        /// mà mỗi vật lại bị xoay ngẫu nhiên quanh trục đứng. Một thân cây đổ dài 2 unit
+        /// xoay 45 độ sẽ cho ra khung bao thế giới rộng tới 1.4 unit theo cả hai chiều —
+        /// gắn va chạm theo số đó thì vật cản phình to hơn hẳn hình mà mắt nhìn thấy.
+        /// Nên ở đây ta lấy 8 đỉnh khung bao của từng mesh rồi đổi về hệ trục của vật.
         /// </summary>
+        private static bool TryComputeLocalBounds(GameObject instance, out Bounds local)
+        {
+            local = default;
+            bool any = false;
+
+            var toLocal = instance.transform.worldToLocalMatrix;
+
+            foreach (var filter in instance.GetComponentsInChildren<MeshFilter>())
+            {
+                var mesh = filter.sharedMesh;
+                if (mesh == null)
+                    continue;
+
+                var meshBounds = mesh.bounds;
+                var matrix = toLocal * filter.transform.localToWorldMatrix;
+
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    var point = new Vector3(
+                        (corner & 1) == 0 ? meshBounds.min.x : meshBounds.max.x,
+                        (corner & 2) == 0 ? meshBounds.min.y : meshBounds.max.y,
+                        (corner & 4) == 0 ? meshBounds.min.z : meshBounds.max.z);
+
+                    var localPoint = matrix.MultiplyPoint3x4(point);
+
+                    if (!any)
+                    {
+                        local = new Bounds(localPoint, Vector3.zero);
+                        any = true;
+                    }
+                    else
+                    {
+                        local.Encapsulate(localPoint);
+                    }
+                }
+            }
+
+            return any && local.size.y > 0.0001f;
+        }
+
         private static void StripColliders(GameObject root)
         {
             var colliders = root.GetComponentsInChildren<Collider>(true);

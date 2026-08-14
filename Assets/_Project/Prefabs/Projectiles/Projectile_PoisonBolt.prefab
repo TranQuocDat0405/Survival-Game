@@ -54,6 +54,9 @@ MonoBehaviour:
   _radius: 0.15
   _hitEffectPrefab: {fileID: 0}
   _maxLifeTime: 6
+  _environmentMask:
+    serializedVersion: 2
+    m_Bits: 24576
 --- !u!1001 &2322160665625388885
 PrefabInstance:
   m_ObjectHideFlags: 0

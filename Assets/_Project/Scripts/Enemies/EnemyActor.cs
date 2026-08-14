@@ -38,6 +38,23 @@ namespace Survival.Enemies
         [SerializeField, Tooltip("Layer được coi là mục tiêu. Với quái thì đây là layer Player.")]
         private LayerMask _targetMask;
 
+        [Header("Né vật cản")]
+        [SerializeField, Tooltip(
+            "Layer của những thứ chặn đường: cây, đá tảng, thân cây đổ, và tường vô hình quanh sân.")]
+        private LayerMask _obstacleMask;
+
+        [SerializeField, Min(0.05f), Tooltip(
+            "Bán kính thân quái, dùng cho tia dò vật cản.\n" +
+            "Nên hơi lớn hơn collider thật một chút để quái bắt đầu lách TRƯỚC khi chạm vào cây, " +
+            "thay vì chạm rồi mới xử lý — chạm rồi mới lách thì nhìn ra thành cảnh húc vào cây rồi giật lùi.")]
+        private float _avoidBodyRadius = 0.45f;
+
+        [SerializeField, Min(0.1f), Tooltip(
+            "Nhìn trước bao xa để phát hiện vật cản, tính bằng unit.\n" +
+            "Ngắn quá thì phát hiện muộn và vẫn húc vào; dài quá thì quái né cả những cái cây " +
+            "mà đường đi thật ra không hề đâm vào, trông như bị hoảng.")]
+        private float _avoidProbeDistance = 1.6f;
+
         [Header("Lúc chết")]
         [SerializeField, Min(0f), Tooltip(
             "Chờ bao lâu sau khi chết rồi mới trả về pool, tính bằng giây.\n" +
@@ -230,7 +247,69 @@ namespace Survival.Enemies
                 return;
             }
 
-            _rigidbody.velocity = direction.normalized * Stats.Get(EStatType.MoveSpeed);
+            direction.Normalize();
+            direction = SteerAroundObstacles(direction);
+
+            _rigidbody.velocity = direction * Stats.Get(EStatType.MoveSpeed);
+        }
+
+        /// <summary>
+        /// Lách quanh vật cản trên đường tới player.
+        ///
+        /// VÌ SAO PHẢI CÓ: game này KHÔNG dùng NavMesh — quái chỉ đơn giản lao thẳng về phía
+        /// người chơi. Chừng nào sân trống thì cách đó chạy tốt và cực rẻ. Nhưng từ khi cây và
+        /// đá có va chạm thật, "lao thẳng" đồng nghĩa với húc vào gốc cây: hệ vật lý chặn lại,
+        /// còn script thì khung hình nào cũng đặt lại đúng vận tốc đâm vào cây đó.
+        /// Kết quả là con quái đứng rung tại chỗ mãi mãi, và người chơi chỉ cần đứng sau một cái cây
+        /// là bất tử.
+        ///
+        /// CÁCH GIẢI: dò một tia hình cầu về phía trước. Gặp vật cản thì thay vì đi thẳng,
+        /// quái đi TRƯỢT DỌC theo mặt vật cản — chiếu hướng mong muốn lên mặt phẳng của vật cản.
+        /// Cách này cho ra chuyển động vòng qua chướng ngại rất tự nhiên, và quan trọng là
+        /// nó không cần biết trước bản đồ, nên thêm bớt cây cối bao nhiêu cũng không phải làm gì thêm.
+        ///
+        /// Đây là kỹ thuật "steering behaviour" cổ điển, nhẹ hơn NavMesh rất nhiều
+        /// (một phép quét hình cầu mỗi con mỗi khung hình) và đủ dùng cho sân đấu trống trải kiểu này.
+        /// </summary>
+        private Vector3 SteerAroundObstacles(Vector3 desired)
+        {
+            if (_obstacleMask.value == 0)
+                return desired;
+
+            // Bắn tia từ ngang thân chứ không từ dưới chân: từ sát mặt đất thì tia
+            // quét trúng luôn mặt nền và quái sẽ tưởng lúc nào phía trước cũng có vật cản.
+            Vector3 origin = _cachedTransform.position + Vector3.up * _avoidBodyRadius;
+
+            if (!Physics.SphereCast(origin, _avoidBodyRadius, desired, out RaycastHit hit,
+                    _avoidProbeDistance, _obstacleMask, QueryTriggerInteraction.Ignore))
+                return desired;
+
+            Vector3 normal = hit.normal;
+            normal.y = 0f;
+
+            Vector3 slide = normal.sqrMagnitude > 0.0001f
+                ? Vector3.ProjectOnPlane(desired, normal.normalized)
+                : Vector3.zero;
+            slide.y = 0f;
+
+            // Đâm gần như vuông góc vào vật cản thì phép chiếu ở trên cho ra vector gần bằng 0
+            // — không còn hướng nào để trượt. Khi đó phải tự chọn vòng sang trái hay sang phải.
+            //
+            // Dùng TÂM KHỐI của vật cản chứ không dùng điểm chạm: khi thân quái đã lọt vào trong
+            // collider thì Unity trả về điểm chạm là gốc toạ độ thế giới, và chọn hướng theo đó
+            // sẽ cho ra một bên hoàn toàn ngẫu nhiên.
+            if (slide.sqrMagnitude < 0.01f)
+            {
+                Vector3 side = Vector3.Cross(Vector3.up, desired);
+
+                Vector3 toObstacle = hit.collider.bounds.center - _cachedTransform.position;
+                toObstacle.y = 0f;
+
+                // Vòng sang phía NGƯỢC LẠI với tâm vật cản, tức là đi ra chỗ trống.
+                slide = Vector3.Dot(toObstacle, side) > 0f ? -side : side;
+            }
+
+            return slide.normalized;
         }
 
         public void StopMoving() => _rigidbody.velocity = Vector3.zero;

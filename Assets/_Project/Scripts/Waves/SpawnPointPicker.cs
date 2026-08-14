@@ -34,6 +34,8 @@ namespace Survival.Waves
         /// <param name="viewportMargin">Nới thêm quanh mép màn hình, tính theo tỉ lệ. 0.1 nghĩa là phải ra ngoài mép thêm 10%.</param>
         /// <param name="checkHeight">Độ cao thân quái dùng khi kiểm tra, để phần đầu cũng không ló vào khung hình.</param>
         /// <param name="angleAttempts">Thử bao nhiêu góc khác nhau trước khi dùng phương án dự phòng.</param>
+        /// <param name="blockMask">Layer của vật cản. Điểm sinh nằm đè lên chúng sẽ bị loại. Để trống thì bỏ qua bước này.</param>
+        /// <param name="clearRadius">Bán kính khoảng trống cần có quanh điểm sinh.</param>
         public static Vector3 Pick(
             Vector3 center,
             float minRadius,
@@ -42,7 +44,9 @@ namespace Survival.Waves
             Camera camera,
             float viewportMargin = 0.12f,
             float checkHeight = 1.8f,
-            int angleAttempts = 12)
+            int angleAttempts = 12,
+            LayerMask blockMask = default,
+            float clearRadius = 0.6f)
         {
             // Bốc trước một góc lệch ngẫu nhiên rồi rải đều các lần thử quanh vòng tròn.
             // Cách này phủ đều mọi hướng tốt hơn là bốc ngẫu nhiên độc lập từng lần,
@@ -63,8 +67,13 @@ namespace Survival.Waves
                     if ((candidate - center).sqrMagnitude < minRadius * minRadius)
                         continue;
 
-                    if (!IsVisible(candidate, camera, viewportMargin, checkHeight))
-                        return candidate;
+                    if (IsVisible(candidate, camera, viewportMargin, checkHeight))
+                        continue;
+
+                    if (IsBlocked(candidate, blockMask, clearRadius))
+                        continue;
+
+                    return candidate;
                 }
             }
 
@@ -76,7 +85,34 @@ namespace Survival.Waves
                 behind = Vector3.back;
             behind.Normalize();
 
+            // Ngay cả phương án dự phòng cũng phải tránh sinh quái vào trong gốc cây,
+            // nên dò thêm vài nấc ra xa dần trước khi đành chấp nhận điểm cuối cùng.
+            for (float radius = minRadius; radius <= maxRadius; radius += SearchStep)
+            {
+                Vector3 candidate = ClampToArena(center + behind * radius, arenaHalfExtent);
+                if (!IsBlocked(candidate, blockMask, clearRadius))
+                    return candidate;
+            }
+
             return ClampToArena(center + behind * minRadius, arenaHalfExtent);
+        }
+
+        /// <summary>
+        /// Chỗ này có vật cản chắn không.
+        ///
+        /// Kiểm tra ở NGANG THÂN quái chứ không phải dưới chân: hình cầu đặt sát mặt đất
+        /// có thể chạm vào chính mặt nền, và khi đó mọi điểm trên sân đều bị coi là có vật cản.
+        /// </summary>
+        private static bool IsBlocked(Vector3 groundPosition, LayerMask blockMask, float clearRadius)
+        {
+            if (blockMask.value == 0)
+                return false;
+
+            return Physics.CheckSphere(
+                groundPosition + Vector3.up * clearRadius,
+                clearRadius,
+                blockMask,
+                QueryTriggerInteraction.Ignore);
         }
 
         private static Vector3 ClampToArena(Vector3 position, float halfExtent)
