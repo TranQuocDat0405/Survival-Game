@@ -44,8 +44,12 @@ namespace Survival.Config
             "của camera về phía trước, nếu không thì hướng phía trước sẽ không bao giờ tìm được chỗ hợp lệ.")]
         private float _maxSearchRadius = 34f;
 
-        [SerializeField, Min(1f), Tooltip("Nửa cạnh sân đấu. Điểm sinh bị kẹp vào trong để quái không kẹt ngoài tường.")]
-        private float _arenaHalfExtent = 27f;
+        [SerializeField, Min(1f), Tooltip(
+            "Bán kính sân đấu. Điểm sinh luôn bị kéo vào trong khoảng này để quái không rơi ra ngoài tường.\n\n" +
+            "Phải NHỎ HƠN bán kính tường một chút. Sân là hình TRÒN nên chỗ này cũng phải là bán kính; " +
+            "nếu kẹp theo hình vuông thì bốn góc hình vuông nằm xa hơn tường và quái sẽ sinh ra bên ngoài.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("_arenaHalfExtent")]
+        private float _arenaRadius = 21f;
 
         [SerializeField, Range(0f, 0.5f), Tooltip(
             "Phải ra ngoài mép màn hình thêm bao nhiêu phần thì mới tính là khuất.\n" +
@@ -81,7 +85,7 @@ namespace Survival.Config
         public float SpawnClearRadius => _spawnClearRadius;
         public float MinSpawnRadius => _minSpawnRadius;
         public float MaxSearchRadius => _maxSearchRadius;
-        public float ArenaHalfExtent => _arenaHalfExtent;
+        public float ArenaRadius => _arenaRadius;
         public float SpawnViewportMargin => _spawnViewportMargin;
         public float DelayBetweenWaves => _delayBetweenWaves;
         public float DelayBeforeFirstWave => _delayBeforeFirstWave;

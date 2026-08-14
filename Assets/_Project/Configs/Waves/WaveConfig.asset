@@ -21,7 +21,7 @@ MonoBehaviour:
     MaxCount: 2
   _minSpawnRadius: 14
   _maxSearchRadius: 34
-  _arenaHalfExtent: 27
+  _arenaRadius: 21
   _spawnViewportMargin: 0.12
   _delayBetweenWaves: 2
   _delayBeforeFirstWave: 2

@@ -29,7 +29,7 @@ namespace Survival.Waves
         /// <param name="center">Tâm, thường là vị trí player.</param>
         /// <param name="minRadius">Không bao giờ sinh gần hơn khoảng này, kể cả khi chỗ đó đã khuất camera.</param>
         /// <param name="maxRadius">Dò xa nhất tới đây rồi bỏ cuộc với góc đang xét.</param>
-        /// <param name="arenaHalfExtent">Nửa cạnh sân đấu. Điểm sinh luôn bị kẹp vào trong để quái không kẹt ngoài tường.</param>
+        /// <param name="arenaRadius">Bán kính sân đấu. Điểm sinh luôn bị kéo vào trong để quái không rơi ra ngoài tường.</param>
         /// <param name="camera">Camera dùng để kiểm tra khuất tầm nhìn. Null thì bỏ qua bước này.</param>
         /// <param name="viewportMargin">Nới thêm quanh mép màn hình, tính theo tỉ lệ. 0.1 nghĩa là phải ra ngoài mép thêm 10%.</param>
         /// <param name="checkHeight">Độ cao thân quái dùng khi kiểm tra, để phần đầu cũng không ló vào khung hình.</param>
@@ -40,7 +40,7 @@ namespace Survival.Waves
             Vector3 center,
             float minRadius,
             float maxRadius,
-            float arenaHalfExtent,
+            float arenaRadius,
             Camera camera,
             float viewportMargin = 0.12f,
             float checkHeight = 1.8f,
@@ -60,7 +60,7 @@ namespace Survival.Waves
 
                 for (float radius = minRadius; radius <= maxRadius; radius += SearchStep)
                 {
-                    Vector3 candidate = ClampToArena(center + direction * radius, arenaHalfExtent);
+                    Vector3 candidate = ClampToArena(center + direction * radius, arenaRadius);
 
                     // Việc kẹp vào sân có thể kéo điểm ngược trở lại gần player,
                     // nên phải kiểm tra lại khoảng cách sau khi kẹp.
@@ -89,12 +89,12 @@ namespace Survival.Waves
             // nên dò thêm vài nấc ra xa dần trước khi đành chấp nhận điểm cuối cùng.
             for (float radius = minRadius; radius <= maxRadius; radius += SearchStep)
             {
-                Vector3 candidate = ClampToArena(center + behind * radius, arenaHalfExtent);
+                Vector3 candidate = ClampToArena(center + behind * radius, arenaRadius);
                 if (!IsBlocked(candidate, blockMask, clearRadius))
                     return candidate;
             }
 
-            return ClampToArena(center + behind * minRadius, arenaHalfExtent);
+            return ClampToArena(center + behind * minRadius, arenaRadius);
         }
 
         /// <summary>
@@ -115,11 +115,22 @@ namespace Survival.Waves
                 QueryTriggerInteraction.Ignore);
         }
 
-        private static Vector3 ClampToArena(Vector3 position, float halfExtent)
+        /// <summary>
+        /// Kéo điểm sinh vào trong sân.
+        ///
+        /// Kẹp theo BÁN KÍNH chứ không theo từng trục. Sân đấu là hình tròn (tường vô hình
+        /// là một vòng ghép từ nhiều tấm), nên kẹp theo trục x và z riêng lẻ sẽ cho ra một
+        /// hình vuông có bốn góc NHÔ RA NGOÀI tường — và đó đúng là chỗ quái sẽ sinh ra
+        /// bên ngoài sân rồi bị tường chặn không vào được.
+        /// </summary>
+        private static Vector3 ClampToArena(Vector3 position, float arenaRadius)
         {
-            position.x = Mathf.Clamp(position.x, -halfExtent, halfExtent);
-            position.z = Mathf.Clamp(position.z, -halfExtent, halfExtent);
             position.y = 0f;
+
+            float distance = position.magnitude;
+            if (distance > arenaRadius && distance > 0.0001f)
+                position *= arenaRadius / distance;
+
             return position;
         }
 

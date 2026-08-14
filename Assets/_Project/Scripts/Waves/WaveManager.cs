@@ -176,7 +176,7 @@ namespace Survival.Waves
                 center,
                 _config.MinSpawnRadius,
                 _config.MaxSearchRadius,
-                _config.ArenaHalfExtent,
+                _config.ArenaRadius,
                 _camera,
                 _config.SpawnViewportMargin,
                 blockMask: _config.SpawnBlockMask,

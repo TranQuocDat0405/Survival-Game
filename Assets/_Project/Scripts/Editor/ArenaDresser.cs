@@ -42,6 +42,24 @@ namespace Survival.EditorTools
     {
         private const string NatureFolder = "Assets/_Project/Art/Environment/Nature";
         private const string ContainerName = "--- Decor ---";
+        private const string BoundaryName = "--- Boundary ---";
+
+        /// <summary>Layer Wall. Tường vô hình chặn player và quái, không chặn tầm nhìn.</summary>
+        private const int WallLayer = 13;
+
+        /// <summary>
+        /// Bán kính tường vô hình. Đây là mép ngoài cùng mà player đi tới được.
+        ///
+        /// Đặt ngay TRƯỚC hàng cây đầu tiên (<see cref="ForestInnerRadius"/>) là có chủ ý:
+        ///   - Không cây nào còn cắm xuyên qua tường, vì tường nằm trước tất cả.
+        ///   - Người chơi đi tới đâu là thấy rừng chặn tới đó, nên mép sân ĐỌC ĐƯỢC BẰNG MẮT
+        ///     dù tường thì vô hình. Trước đây tường ở 30 còn rừng bắt đầu từ 22.5,
+        ///     nên người chơi đi lọt vào giữa rừng rồi mới bị chặn — vừa rối mắt vừa dễ kẹt quái.
+        /// </summary>
+        private const float ArenaRadius = 22f;
+
+        /// <summary>Rừng bắt đầu ngay sau tường, chừa một khe nhỏ để thân cây không chạm mặt tường.</summary>
+        private const float ForestInnerRadius = 22.6f;
 
         /// <summary>Layer Obstacle. Khớp với ma trận va chạm: chặn Player, Enemy và cả hai loại đạn.</summary>
         private const int ObstacleLayer = 14;
@@ -49,8 +67,8 @@ namespace Survival.EditorTools
         /// <summary>Bán kính vùng chơi. Bên trong chỉ có vật thấp, và rất ít vật đặc.</summary>
         private const float PlayableRadius = 21f;
 
-        /// <summary>Nửa cạnh sân, trùng với tường vô hình.</summary>
-        private const float ArenaHalfExtent = 30f;
+        /// <summary>Số tấm ghép nên vòng tường. Càng nhiều thì vòng càng tròn, nhưng tốn collider.</summary>
+        private const int WallSegments = 44;
 
         /// <summary>
         /// Rừng trồng lan ra tới đâu, tính từ tâm.
@@ -59,18 +77,22 @@ namespace Survival.EditorTools
         /// rải theo hình TRÒN. Nếu vành rừng dừng đúng ở mép sân thì bốn góc vuông lộ ra
         /// trống trơn, và người chơi nhìn thấy đường mép thẳng tắp của mặt nền —
         /// đọc ra ngay là bản đồ chưa làm xong.
-        /// Trồng lan ra tận 46 thì rừng phủ kín cả bốn góc và che hẳn đường mép đó đi.
+        /// Trồng lan ra tới đâu thì đo được bằng chính camera chứ không đoán:
+        /// đặt player sát tường rồi chiếu bốn góc khung hình xuống mặt đất, điểm xa nhất
+        /// camera nhìn thấy cách tâm 40.8 unit. Trồng tới 42 là vừa đủ phủ kín chân trời;
+        /// trồng xa hơn nữa thì không ai nhìn thấy, chỉ tốn máy.
         /// </summary>
-        private const float ForestOuterRadius = 46f;
+        private const float ForestOuterRadius = 42f;
 
         /// <summary>
         /// Ngoài khoảng này thì cây chỉ còn là hình nền, không gắn va chạm nữa.
         ///
-        /// Tường vô hình nằm ở 30 nên người chơi không bao giờ ra tới đó được.
-        /// Gắn va chạm cho vài trăm cây mà không ai chạm tới chỉ tốn bộ nhớ
-        /// và tốn thời gian dựng cây va chạm lúc mở màn.
+        /// Người chơi bị tường chặn ở 22 nên không bao giờ chạm tới cây ngoài đó.
+        /// Nhưng MŨI TÊN thì vẫn bay ra được: đứng sát tường bắn ra ngoài, tầm 8 unit,
+        /// tức là tới 30. Cây trong khoảng đó vẫn phải chặn được tên thì mới nhất quán,
+        /// nên lấy 31 cho dư một chút. Xa hơn nữa thì gắn va chạm chỉ tốn bộ nhớ.
         /// </summary>
-        private const float ColliderCutoffRadius = 32f;
+        private const float ColliderCutoffRadius = 31f;
 
         /// <summary>
         /// Bán kính thân cây, tính theo phần trăm bề ngang cả tán.
@@ -190,21 +212,32 @@ namespace Survival.EditorTools
             // đọc được, nói rõ tới đây là hết sân — quan trọng vì tường thật thì vô hình.
             // Lớp ngoài thưa dần và trải rất xa, để khi nhìn về phía chân trời thấy rừng
             // kéo dài chứ không phải một vành cây rồi hết.
-            placed += ScatterRing(container.transform, bigTrees, count: 300, inner: PlayableRadius + 1.5f, outer: ArenaHalfExtent + 1f, minHeight: 2.2f, maxHeight: 3.6f, solid: true);
-            placed += ScatterRing(container.transform, bigTrees, count: 320, inner: ArenaHalfExtent, outer: ForestOuterRadius, minHeight: 2.6f, maxHeight: 4.5f, solid: true);
-            placed += ScatterRing(container.transform, deadTrees, count: 55, inner: PlayableRadius + 2f, outer: ForestOuterRadius - 6f, minHeight: 1.8f, maxHeight: 3.0f, solid: true);
+            // Lớp trong: hàng cây người chơi đứng sát và nhìn thấy rõ từng gốc.
+            placed += ScatterRing(container.transform, bigTrees, count: 300, inner: ForestInnerRadius, outer: 31f, minHeight: 2.6f, maxHeight: 4.2f, solid: true);
+
+            // Lớp ngoài phải CAO HẲN LÊN, đây là bức tường thị giác.
+            //
+            // Camera nghiêng 52 độ nên khi người chơi đứng sát tường, tầm nhìn trải tới tận
+            // bán kính 40. Nếu vành rừng chỉ cao 2-4 unit thì mắt nhìn VƯỢT QUA ngọn cây
+            // và thấy khoảng trời xám phía sau — đúng cái cảm giác bản đồ chưa làm xong.
+            // Cây cao 5-8 unit ở vòng ngoài thì che kín đường chân trời, và vì chúng ở xa
+            // nên trông vẫn tự nhiên chứ không hề che tầm nhìn lúc đánh nhau.
+            placed += ScatterRing(container.transform, bigTrees, count: 430, inner: 30f, outer: ForestOuterRadius, minHeight: 5.0f, maxHeight: 8.0f, solid: true);
+            placed += ScatterRing(container.transform, deadTrees, count: 55, inner: ForestInnerRadius + 1f, outer: ForestOuterRadius - 5f, minHeight: 1.8f, maxHeight: 3.0f, solid: true);
 
             // Cây lá đỏ rải thưa làm điểm nhấn, khoảng một phần mười số cây xanh.
-            placed += ScatterRing(container.transform, accentTrees, count: 62, inner: PlayableRadius + 2f, outer: ForestOuterRadius - 4f, minHeight: 2.2f, maxHeight: 3.6f, solid: true);
+            placed += ScatterRing(container.transform, accentTrees, count: 62, inner: ForestInnerRadius + 1f, outer: ForestOuterRadius - 3f, minHeight: 2.2f, maxHeight: 3.6f, solid: true);
 
             // Bụi cây lấp chân rừng, để giữa gốc cây và mặt cỏ không bị hở một khoảng trống.
             // KHÔNG có va chạm: bụi thấp thì người chơi lướt qua được, chặn lại sẽ rất bực.
-            // Bắt đầu từ NGOÀI mép vùng chơi, vì chúng cao tới 1.0 — vượt ngưỡng 0.65 dành cho vùng đánh nhau.
-            placed += ScatterRing(container.transform, bushes, count: 240, inner: PlayableRadius + 0.5f, outer: ArenaHalfExtent + 8f, minHeight: 0.5f, maxHeight: 1.0f, solid: false);
+            // Bắt đầu từ NGOÀI tường, vì chúng cao tới 1.0 — vượt ngưỡng 0.65 dành cho vùng đánh nhau.
+            placed += ScatterRing(container.transform, bushes, count: 240, inner: ArenaRadius, outer: 34f, minHeight: 0.5f, maxHeight: 1.0f, solid: false);
 
             // ĐÁ LỚN LÀM MỐC ở vành ngoài vùng chơi. Giờ chúng ĐẶC, nên vừa là mốc định vị
             // vừa là chỗ nấp thật sự khi bị quái vây.
-            placed += ScatterLandmarks(container.transform, mossyRocks, count: 26, inner: PlayableRadius - 5f, outer: PlayableRadius + 3f, minSpacing: 4.5f, minHeight: MinSolidHeightInPlayArea, maxHeight: 1.15f);
+            // Trần là 21.5 chứ không phải 24: quá 22 là nằm ngoài tường, người chơi không tới được
+            // mà lại chắn mất tầm nhìn ra vành rừng.
+            placed += ScatterLandmarks(container.transform, mossyRocks, count: 26, inner: PlayableRadius - 6f, outer: 21.5f, minSpacing: 4.5f, minHeight: MinSolidHeightInPlayArea, maxHeight: 1.15f);
 
             // ---------- VÙNG GIỮA SÂN ----------
             // Trước đây chỗ này gần như trống, chỉ có cỏ và sỏi vụn nên nhìn như một bãi cỏ
@@ -247,8 +280,76 @@ namespace Survival.EditorTools
             // mà tuyệt đối không che được thứ gì, nên rải thoải mái.
             placed += ScatterClusters(container.transform, petals, clusters: 95, perCluster: 9, clusterRadius: 1.1f, areaRadius: PlayableRadius, minHeight: 0.05f, maxHeight: 0.11f);
 
+            int wallPieces = BuildBoundary();
+
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
-            Debug.Log($"[ArenaDresser] Đã đặt {placed} vật trang trí, trong đó {_solidCount} vật có va chạm (layer Obstacle).");
+            Debug.Log($"[ArenaDresser] Đã đặt {placed} vật trang trí ({_solidCount} vật có va chạm) và {wallPieces} tấm tường vòng bán kính {ArenaRadius}.");
+        }
+
+        /// <summary>
+        /// Dựng tường vô hình thành một VÒNG TRÒN quanh sân.
+        ///
+        /// Trước đây tường là bốn tấm phẳng ghép thành hình vuông. Hình vuông có hai vấn đề:
+        ///   - Bốn góc xa tâm hơn hẳn bốn cạnh (30 so với 42), nên người chơi chạy vào góc là
+        ///     lọt sâu vào giữa rừng — đúng chỗ dày cây nhất và dễ kẹt quái nhất.
+        ///   - Mép sân khi đó không khớp với vành rừng vốn là hình tròn, nên nhìn ra ngay
+        ///     là có một bức tường vô hình nằm lệch so với hàng cây.
+        ///
+        /// Vòng tròn ghép từ nhiều tấm phẳng thì mọi hướng đều dừng ở cùng một khoảng cách,
+        /// và khoảng cách đó trùng đúng với chỗ hàng cây bắt đầu.
+        /// </summary>
+        private static int BuildBoundary()
+        {
+            var old = GameObject.Find(BoundaryName);
+            if (old != null)
+                Object.DestroyImmediate(old);
+
+            // Dọn MỌI thứ còn nằm ở layer Wall, bất kể nó nằm ở đâu trong cây phân cấp.
+            //
+            // Trước đây chỗ này chỉ quét ở gốc cây phân cấp, và bốn bức tường vuông cũ lại nằm
+            // dưới "--- Arena ---" nên thoát hết. Tệ hơn nữa là chúng CÓ MeshRenderer:
+            // người chơi nhìn thấy một dải xám chắn ngang chân trời và tưởng bản đồ bị hụt,
+            // trong khi thật ra đó là bức tường đáng lẽ phải vô hình.
+            var stale = new List<GameObject>();
+            foreach (var go in Object.FindObjectsOfType<GameObject>())
+            {
+                if (go.layer != WallLayer)
+                    continue;
+
+                // Bỏ qua tường mới vừa dựng ở lượt chạy này (nếu có).
+                if (go.transform.root != null && go.transform.root.name == BoundaryName)
+                    continue;
+
+                stale.Add(go);
+            }
+            foreach (var go in stale)
+                Object.DestroyImmediate(go);
+
+            var root = new GameObject(BoundaryName);
+            root.isStatic = true;
+
+            // Mỗi tấm phải rộng hơn dây cung một chút để hai tấm cạnh nhau chồng mép,
+            // nếu không sẽ hở những khe nhỏ đúng chỗ nối và người chơi lọt qua được.
+            float chord = 2f * ArenaRadius * Mathf.Sin(Mathf.PI / WallSegments);
+            float width = chord * 1.25f;
+
+            for (int i = 0; i < WallSegments; i++)
+            {
+                float angle = i * Mathf.PI * 2f / WallSegments;
+                var direction = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+
+                var piece = new GameObject($"Wall_{i:00}");
+                piece.transform.SetParent(root.transform, false);
+                piece.transform.position = direction * ArenaRadius + Vector3.up * 1.5f;
+                piece.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+                piece.layer = WallLayer;
+                piece.isStatic = true;
+
+                var box = piece.AddComponent<BoxCollider>();
+                box.size = new Vector3(width, 3f, 0.5f);
+            }
+
+            return WallSegments;
         }
 
         private static List<GameObject> LoadAll(params string[] prefixes)
@@ -588,8 +689,22 @@ namespace Survival.EditorTools
                 ? Random.Range(minHeight, maxHeight) / natural
                 : 1f;
 
-            instance.transform.localScale = nativeScale * factor;
+            instance.transform.localScale = nativeScale * ClampFactor(factor);
         }
+
+        /// <summary>
+        /// Chặn không cho phóng một model to hơn hẳn cỡ tự nhiên của nó.
+        ///
+        /// Đặt kích thước theo chiều cao chỉ đúng khi mọi model trong cùng một nhóm có tỉ lệ
+        /// gần giống nhau. Thực tế thì không: nhóm <c>Plant</c> có model cao 0.25 và model cao 3.76.
+        /// Ép cả nhóm cao 1.0 thì con 0.25 bị nhân bốn lần — cao thì đúng 1.0 thật,
+        /// nhưng BỀ NGANG cũng nở gấp bốn và cho ra một bụi cây to như cái xe,
+        /// nằm chình ình giữa cảnh. Đây đúng là lỗi đã gặp với đá lát đường, chỉ khác chỗ xảy ra.
+        ///
+        /// Chặn trần ở 1.4 nghĩa là thà chấp nhận vài cái thấp hơn ý muốn,
+        /// còn hơn để lọt một cái phình to phá hỏng cả khung hình.
+        /// </summary>
+        private static float ClampFactor(float factor) => Mathf.Clamp(factor, 0.08f, 1.4f);
 
         /// <summary>
         /// Hạ vật xuống cho ĐÁY CHẠM MẶT ĐẤT.
@@ -640,7 +755,7 @@ namespace Survival.EditorTools
                 ? Random.Range(minWidth, maxWidth) / natural
                 : 1f;
 
-            instance.transform.localScale = nativeScale * factor;
+            instance.transform.localScale = nativeScale * ClampFactor(factor);
         }
 
         /// <summary>Bề ngang thật của model khi đặt vào cảnh, lấy cạnh dài hơn trong hai chiều ngang.</summary>
