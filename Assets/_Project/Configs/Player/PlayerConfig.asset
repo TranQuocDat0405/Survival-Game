@@ -16,9 +16,9 @@ MonoBehaviour:
   - Type: 0
     Value: 500
   - Type: 1
-    Value: 2
+    Value: 3.2
   - Type: 2
-    Value: 180
+    Value: 360
   - Type: 3
     Value: 0
   - Type: 4
