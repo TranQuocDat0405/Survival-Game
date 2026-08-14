@@ -144,6 +144,18 @@ namespace Survival.EditorTools
             controller.AddParameter("Dash", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Throw", AnimatorControllerParameterType.Trigger);
 
+            // BẬT IK PASS — bắt buộc, nếu không Unity KHÔNG BAO GIỜ gọi OnAnimatorIK.
+            //
+            // Đây là thứ dùng để ép bàn tay trái nắm vào báng nỏ (xem WeaponTwoHandIK).
+            // Điều nguy hiểm là quên bật thì không có một lỗi hay cảnh báo nào cả —
+            // bàn tay chỉ đơn giản là không nhúc nhích, và rất khó đoán ra nguyên nhân.
+            //
+            // layers[0] trả về một BẢN SAO chứ không phải tham chiếu tới layer thật,
+            // nên phải sửa trên bản sao rồi GÁN NGƯỢC lại vào mảng thì thay đổi mới có hiệu lực.
+            var layers = controller.layers;
+            layers[0].iKPass = true;
+            controller.layers = layers;
+
             var root = controller.layers[0].stateMachine;
 
             // Trạng thái nền: pha trộn giữa đứng yên và chạy theo tham số Speed.
