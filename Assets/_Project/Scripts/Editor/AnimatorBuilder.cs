@@ -59,6 +59,60 @@ namespace Survival.EditorTools
             return result;
         }
 
+        /// <summary>
+        /// Lấy controller ở đường dẫn cho sẵn, XOÁ RUỘT nhưng GIỮ NGUYÊN FILE.
+        ///
+        /// ĐÂY LÀ CHỖ ĐÃ GÂY RA MỘT SỰ CỐ ĐÁNG NHỚ, ghi lại để không ai lặp lại.
+        ///
+        /// Trước đây hàm dựng gọi <c>AssetDatabase.DeleteAsset</c> rồi tạo file mới. File mới
+        /// mang một GUID MỚI, mà Unity tham chiếu asset bằng GUID chứ không phải bằng đường dẫn —
+        /// nên mọi nơi đang trỏ tới controller cũ (Animator của player trong scene, Animator trong
+        /// hai prefab quái) lập tức thành rỗng.
+        ///
+        /// Hậu quả khi chơi: nhân vật đứng chết một tư thế, không còn animation nào, và console
+        /// đầy cảnh báo "Animator is not playing an AnimatorController".
+        ///
+        /// Điều nguy hiểm nhất là LỆNH DỰNG VẪN BÁO THÀNH CÔNG, không một lỗi nào —
+        /// hỏng chỉ lộ ra khi bấm Play. Giữ nguyên file và chỉ xoá ruột thì GUID không đổi,
+        /// mọi tham chiếu còn nguyên vẹn.
+        /// </summary>
+        private static AnimatorController CreateOrClear(string path)
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
+            if (controller == null)
+                return AnimatorController.CreateAnimatorControllerAtPath(path);
+
+            while (controller.parameters.Length > 0)
+                controller.RemoveParameter(0);
+
+            while (controller.layers.Length > 1)
+                controller.RemoveLayer(controller.layers.Length - 1);
+
+            if (controller.layers.Length == 0)
+                controller.AddLayer("Base Layer");
+
+            var machine = controller.layers[0].stateMachine;
+
+            foreach (var transition in machine.anyStateTransitions)
+                machine.RemoveAnyStateTransition(transition);
+            foreach (var transition in machine.entryTransitions)
+                machine.RemoveEntryTransition(transition);
+            foreach (var child in machine.stateMachines)
+                machine.RemoveStateMachine(child.stateMachine);
+            foreach (var child in machine.states)
+                machine.RemoveState(child.state);
+
+            // Blend Tree của lần dựng trước nằm lại làm asset con mồ côi trong chính file này.
+            // Không dọn thì mỗi lần chạy lệnh file lại phình thêm một cây nữa.
+            foreach (var sub in AssetDatabase.LoadAllAssetsAtPath(path))
+            {
+                if (sub is BlendTree)
+                    Object.DestroyImmediate(sub, true);
+            }
+
+            return controller;
+        }
+
         private static AnimationClip Get(Dictionary<string, AnimationClip> clips, string name)
         {
             if (clips.TryGetValue(name, out var clip))
@@ -73,8 +127,7 @@ namespace Survival.EditorTools
         private static void BuildPlayer(Dictionary<string, AnimationClip> clips)
         {
             string path = $"{OutputFolder}/AC_Player.controller";
-            AssetDatabase.DeleteAsset(path);
-            var controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+            var controller = CreateOrClear(path);
 
             controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
 
@@ -96,8 +149,15 @@ namespace Survival.EditorTools
             // Trạng thái nền: pha trộn giữa đứng yên và chạy theo tham số Speed.
             // Dùng Blend Tree chứ không phải hai state riêng, để lúc chuyển tốc độ
             // nhân vật hoà dần chứ không nhảy khựng giữa hai animation.
+            // BỘ CLIP NỎ HAI TAY. Trước đây dùng Idle_A (đứng tay không) và Ranged_1H_Shoot
+            // (bắn một tay), nên nhân vật cầm nỏ mà tư thế lại như đang cầm súng lục —
+            // cây nỏ chĩa theo cánh tay chứ không chĩa ra trước.
+            //
+            // Bộ KayKit vốn có sẵn nhóm Ranged_2H_* làm riêng cho nỏ: hai tay ôm nỏ đưa
+            // thẳng ra trước, và clip bắn đã có sẵn cú giật lùi. Dùng đúng bộ đó thì tư thế
+            // khớp với vũ khí mà không phải chỉnh gì thêm.
             var locomotion = CreateBlendTree(controller, root, "Locomotion", "Speed",
-                Get(clips, "Idle_A"), Get(clips, "Running_HoldingBow"));
+                Get(clips, "Ranged_2H_Aiming"), Get(clips, "Running_HoldingRifle"));
             root.defaultState = locomotion;
 
             // Cho tốc độ phát của trạng thái chạy được điều khiển bằng tham số, thay vì cố định 1.
@@ -105,7 +165,7 @@ namespace Survival.EditorTools
             locomotion.speedParameterActive = true;
             locomotion.speedParameter = "LocomotionSpeed";
 
-            var shoot = AddState(root, "Shoot", Get(clips, "Ranged_1H_Shoot"), new Vector3(320f, -120f, 0f));
+            var shoot = AddState(root, "Shoot", Get(clips, "Ranged_2H_Shoot"), new Vector3(320f, -120f, 0f));
             var dash  = AddState(root, "Dash",  Get(clips, "Dodge_Forward"),   new Vector3(320f, -40f, 0f));
             var throwState = AddState(root, "Throw", Get(clips, "Throw"),      new Vector3(320f, 40f, 0f));
             var hit   = AddState(root, "Hit",   Get(clips, "Hit_A"),           new Vector3(320f, 120f, 0f));
@@ -144,8 +204,7 @@ namespace Survival.EditorTools
         private static void BuildEnemy(Dictionary<string, AnimationClip> clips, string fileName, string attackClipName)
         {
             string path = $"{OutputFolder}/{fileName}.controller";
-            AssetDatabase.DeleteAsset(path);
-            var controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+            var controller = CreateOrClear(path);
 
             controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
             controller.AddParameter("Dead", AnimatorControllerParameterType.Bool);
