@@ -409,11 +409,16 @@ namespace Survival.EditorTools
             var start = new Vector3(Mathf.Cos(startAngle), 0f, Mathf.Sin(startAngle)) * (areaRadius + 3f);
             var end = new Vector3(Mathf.Cos(endAngle), 0f, Mathf.Sin(endAngle)) * (areaRadius + 3f);
 
-            // Điểm điều khiển lệch khỏi tâm để đường võng sang một bên.
+            // Điểm điều khiển chỉ lệch NHẸ khỏi tâm.
+            //
+            // Trước đây lệch tới 10 unit, và hậu quả là con đường võng hẳn ra sát rìa sân:
+            // người chơi đứng giữa sân đánh nhau thì không bao giờ nhìn thấy nó.
+            // Mà chỗ người chơi đứng nhiều nhất mới đúng là chỗ cần một cái mốc để định vị.
+            // Lệch ít thì đường vẫn cong tự nhiên nhưng luôn đi vòng qua gần tâm.
             var control = Vector3.Lerp(start, end, 0.5f)
-                + new Vector3(Random.Range(-10f, 10f), 0f, Random.Range(-10f, 10f));
+                + new Vector3(Random.Range(-4f, 4f), 0f, Random.Range(-4f, 4f));
 
-            const int steps = 120;
+            const int steps = 170;
             for (int i = 0; i <= steps; i++)
             {
                 float t = i / (float)steps;
@@ -426,26 +431,38 @@ namespace Survival.EditorTools
                 if (point.magnitude > areaRadius + 2f)
                     continue;
 
-                // Lệch ngang ngẫu nhiên để mép đường lởm chởm tự nhiên.
                 var tangent = (b - a).normalized;
                 var side = Vector3.Cross(Vector3.up, tangent);
-                point += side * Random.Range(-0.7f, 0.7f);
 
-                var prefab = pool[Random.Range(0, pool.Count)];
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-                if (instance == null)
-                    continue;
+                // Lát NHIỀU viên ngang mặt đường chứ không phải một viên.
+                //
+                // Một hàng đá đơn nhìn ra chỉ là chuỗi sỏi rơi vãi. Con đường chỉ đọc được
+                // khi nó đủ rộng cỡ hai bước chân — lúc đó mắt mới hiểu là chỗ này có người đi qua.
+                // Đây chính là thứ tạo khác biệt giữa "bãi cỏ có rải đá" và "khu rừng có lối mòn".
+                int across = Random.Range(2, 5);
+                for (int k = 0; k < across; k++)
+                {
+                    var spot = point + side * Random.Range(-1.0f, 1.0f);
 
-                // Lún nhẹ xuống đất để viên đá trông như đã nằm đó lâu ngày,
-                // chứ không phải vừa được đặt lên trên mặt cỏ.
-                instance.transform.position = point + Vector3.down * 0.04f;
-                instance.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-                // Đá lát phải gần như phẳng. Đây là mặt đường nhìn từ trên xuống,
-                // để dày lên là thành một hàng đá tảng chắn ngang sân.
-                ScaleToHeight(instance, prefab, 0.03f, 0.07f);
-                instance.isStatic = true;
-                StripColliders(instance);
-                placed++;
+                    var prefab = pool[Random.Range(0, pool.Count)];
+                    var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+                    if (instance == null)
+                        continue;
+
+                    instance.transform.position = spot;
+                    instance.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+                    ScaleToHeight(instance, prefab, 0.05f, 0.10f);
+                    AlignToGround(instance, sink: 0f);
+
+                    // Lún nhẹ xuống đất để viên đá trông như đã nằm đó lâu ngày,
+                    // chứ không phải vừa được đặt lên trên mặt cỏ.
+                    // Phải hạ SAU khi canh đáy chạm đất, nếu không sẽ bị canh ngược lên lại.
+                    instance.transform.position += Vector3.down * 0.03f;
+
+                    instance.isStatic = true;
+                    StripColliders(instance);
+                    placed++;
+                }
             }
 
             return placed;

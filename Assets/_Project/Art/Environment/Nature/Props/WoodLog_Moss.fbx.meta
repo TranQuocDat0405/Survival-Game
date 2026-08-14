@@ -18,7 +18,7 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Green
-    second: {fileID: 2100000, guid: f89aaf432cc845e46b892f468eed7b8b, type: 2}
+    second: {fileID: 2100000, guid: 3e85fb1360548864aa193243b098b145, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
@@ -28,12 +28,12 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mushroom_Bottom
-    second: {fileID: 2100000, guid: 9fbbabcb152978646aafa68a843faa75, type: 2}
+    second: {fileID: 2100000, guid: 85ee8abefa51060499ea3aef0ea70603, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mushroom_Top
-    second: {fileID: 2100000, guid: 8efd629707d122c40aac446c0968ef52, type: 2}
+    second: {fileID: 2100000, guid: c1677f8dcaaf0854b8d24e3f89679a99, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
@@ -43,11 +43,11 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Wood
-    second: {fileID: 2100000, guid: 9e019a85d968cdf4c81d8f931396d0e5, type: 2}
+    second: {fileID: 2100000, guid: bec632b9e92b31745b32b36268a18539, type: 2}
   materials:
     materialImportMode: 1
-    materialName: 0
-    materialSearch: 1
+    materialName: 1
+    materialSearch: 0
     materialLocation: 0
   animations:
     legacyGenerateAnimations: 4

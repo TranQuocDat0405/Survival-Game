@@ -8,7 +8,7 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Berry
-    second: {fileID: 2100000, guid: 17a6d4bc86988ab429494fa51ac0ff15, type: 2}
+    second: {fileID: 2100000, guid: a6cf3a3ae1223ee46ac2fada0f967566, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
@@ -18,7 +18,7 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Green
-    second: {fileID: 2100000, guid: f89aaf432cc845e46b892f468eed7b8b, type: 2}
+    second: {fileID: 2100000, guid: 3e85fb1360548864aa193243b098b145, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
@@ -46,8 +46,8 @@ ModelImporter:
     second: {fileID: 2100000, guid: 9e019a85d968cdf4c81d8f931396d0e5, type: 2}
   materials:
     materialImportMode: 1
-    materialName: 0
-    materialSearch: 1
+    materialName: 1
+    materialSearch: 0
     materialLocation: 0
   animations:
     legacyGenerateAnimations: 4

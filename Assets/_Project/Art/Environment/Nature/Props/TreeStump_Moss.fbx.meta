@@ -18,12 +18,12 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Green
-    second: {fileID: 2100000, guid: f89aaf432cc845e46b892f468eed7b8b, type: 2}
+    second: {fileID: 2100000, guid: 3e85fb1360548864aa193243b098b145, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: LightWood
-    second: {fileID: 2100000, guid: c16a25f2a69cef84e83301dd98fe5c4b, type: 2}
+    second: {fileID: 2100000, guid: 7012f772cc0c3304388db954974d79b6, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
@@ -43,11 +43,11 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Wood
-    second: {fileID: 2100000, guid: 9e019a85d968cdf4c81d8f931396d0e5, type: 2}
+    second: {fileID: 2100000, guid: bec632b9e92b31745b32b36268a18539, type: 2}
   materials:
     materialImportMode: 1
-    materialName: 0
-    materialSearch: 1
+    materialName: 1
+    materialSearch: 0
     materialLocation: 0
   animations:
     legacyGenerateAnimations: 4
