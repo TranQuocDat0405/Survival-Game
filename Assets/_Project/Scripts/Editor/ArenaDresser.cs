@@ -148,7 +148,15 @@ namespace Survival.EditorTools
             var flowers = LoadAll("Flower_");
             var mushrooms = LoadAll("Mushroom_");
             var petals = LoadAll("Petal_");
-            var pathStones = LoadAll("RockPath_");
+
+            // Bộ RockPath_ là một BỘ KIT LÁT ĐƯỜNG chứ không phải mười viên đá rời.
+            // Tác giả cố tình làm phiến to (Wide 2.27, Thin 1.44) để lát nền, và viên nhỏ
+            // (Small 0.43-0.57) để chèn khe. Trước đây tôi ép tất cả về cùng một cỡ 0.6,
+            // tức là vứt bỏ đúng cái làm nên vẻ đẹp của bộ kit — mặt đường thành ra
+            // một lưới ô vuông đều tăm tắp, nhìn cứng ngắc.
+            var pathSlabs = LoadAll("RockPath_Round_Wide", "RockPath_Round_Thin",
+                                    "RockPath_Square_Wide", "RockPath_Square_Thin");
+            var pathPebbles = LoadAll("RockPath_Round_Small", "RockPath_Square_Small");
             var logs = LoadAll("WoodLog", "TreeStump");
             var mossyRocks = LoadAll("Rock_Moss_");
             var berryBushes = LoadAll("BushBerries_");
@@ -207,7 +215,7 @@ namespace Survival.EditorTools
             // CON ĐƯỜNG LÁT ĐÁ vắt ngang sân — thứ tạo khác biệt lớn nhất giữa "bãi cỏ có rải đá"
             // và "một map game". Cây cỏ ngẫu nhiên dù dày tới đâu vẫn đọc ra là thiên nhiên vô chủ;
             // một con đường thì lập tức nói rằng chỗ này có người từng đi qua.
-            placed += ScatterPath(container.transform, pathStones);
+            placed += ScatterPath(container.transform, pathSlabs, pathPebbles, grass, flowers);
 
             int wallPieces = BuildBoundary();
 
@@ -517,23 +525,27 @@ namespace Survival.EditorTools
         }
 
         /// <summary>
-        /// Lát một con đường đá cong vắt ngang sân trống.
+        /// Lát một con đường đá vắt ngang sân trống, ghép từ BA LỚP.
         ///
-        /// Đường đi theo đường cong mềm chứ không phải đường thẳng: đường thẳng tắp nhìn ra ngay
-        /// là do máy vẽ, còn đường cong nhẹ thì giống lối mòn do người đi tạo thành.
+        /// Đây là cách bộ RockPath_ được thiết kế để dùng, và cũng là cách các game stylized
+        /// dựng đường lát: không phải rải một cỡ đá đều nhau, mà chồng nhiều cỡ lên nhau.
         ///
-        /// Đá được lát thành NHIỀU LÀN cách đều nhau ngang mặt đường, mỗi làn một viên.
-        /// Đây là chỗ đã sai hai lần: bốc vị trí ngang ngẫu nhiên trong cả dải thì hai viên
-        /// rơi trúng nhau và đè chồng; còn co giãn viên đá theo CHIỀU CAO thì bề ngang thả nổi
-        /// (đo được có viên rộng 0.42 và có phiến rộng 2.56) nên phiến to đè lên hai viên bên cạnh.
-        /// Giờ chia làn cách đều và co giãn theo BỀ NGANG — thứ duy nhất có ý nghĩa với một phiến đá bẹt.
+        ///   LỚP 1 — phiến to lát nền, XOAY THEO HƯỚNG ĐƯỜNG. Đây là thứ tạo ra hình con đường.
+        ///           Chồng mép lên nhau thoải mái: mặt đường thật vốn có phiến gối lên phiến.
+        ///   LỚP 2 — đá nhỏ chèn vào khe giữa các phiến, xoay tự do. Lớp này lấp kín lỗ hổng
+        ///           và phá vỡ sự đều đặn của lớp dưới.
+        ///   LỚP 3 — đá vụn rải ra ngoài hai mép, mật độ GIẢM DẦN theo khoảng cách tới tim đường.
+        ///           Đây là thứ quan trọng nhất về thẩm mỹ: mép đường tan dần vào cỏ thì con đường
+        ///           trông như đã nằm đó lâu năm, thay vì vừa được dán vào.
+        ///
+        /// Cộng thêm vài nhúm cỏ và hoa mọc chen trong khe đá, để mặt đường không bị phẳng lì
+        /// và để nối con đường với thảm cỏ xung quanh.
         /// </summary>
-        private static int ScatterPath(Transform parent, List<GameObject> pool)
+        private static int ScatterPath(Transform parent, List<GameObject> slabs, List<GameObject> pebbles,
+            List<GameObject> grass, List<GameObject> flowers)
         {
-            if (pool.Count == 0)
+            if (slabs.Count == 0 || pebbles.Count == 0)
                 return 0;
-
-            int placed = 0;
 
             float startAngle = Random.Range(0f, Mathf.PI * 2f);
             float endAngle = startAngle + Mathf.PI + Random.Range(-0.6f, 0.6f);
@@ -542,74 +554,158 @@ namespace Survival.EditorTools
             var start = new Vector3(Mathf.Cos(startAngle), 0f, Mathf.Sin(startAngle)) * reach;
             var end = new Vector3(Mathf.Cos(endAngle), 0f, Mathf.Sin(endAngle)) * reach;
 
-            // Điểm điều khiển chỉ lệch nhẹ, để con đường luôn đi vòng qua GẦN TÂM sân —
+            // Điểm điều khiển chỉ lệch nhẹ, để đường luôn đi vòng qua GẦN TÂM sân —
             // chỗ người chơi đứng nhiều nhất mới là chỗ cần một cái mốc để định vị.
             var control = Vector3.Lerp(start, end, 0.5f)
-                + new Vector3(Random.Range(-4f, 4f), 0f, Random.Range(-4f, 4f));
+                + new Vector3(Random.Range(-5f, 5f), 0f, Random.Range(-5f, 5f));
 
-            // Mặt đường rộng 2.5 unit, cỡ hai rưỡi thân người — đủ để đọc ra là đường cho người đi bộ.
-            const int lanes = 4;
-            const float roadWidth = 2.5f;
-            // Bước dọc đường phải LỚN HƠN bề ngang viên đá thì hai viên liên tiếp mới không đè nhau.
-            // Đường dài khoảng 38 unit, 48 bước là cách nhau 0.79 — vừa đủ hơn viên rộng nhất 0.62.
-            const int steps = 48;
+            const float halfWidth = 1.3f;   // mặt đường rộng 2.6 unit, cỡ hai rưỡi thân người
+            int placed = 0;
 
-            for (int i = 0; i <= steps; i++)
+            // ---------- LỚP 1: phiến to lát nền ----------
+            foreach (var s in SampleCurve(start, control, end, 0.85f))
             {
-                float t = i / (float)steps;
+                for (int k = 0; k < 3; k++)
+                {
+                    float lateral = Mathf.Lerp(-halfWidth * 0.62f, halfWidth * 0.62f, k / 2f) + Random.Range(-0.28f, 0.28f);
+                    var spot = s.Point + s.Side * lateral;
+                    if (Mathf.Abs(spot.x) > OpenFieldExtent || Mathf.Abs(spot.z) > OpenFieldExtent)
+                        continue;
 
-                // Đường cong bậc hai: nội suy hai lần cho ra một đường cong trơn.
+                    // Xoay THEO HƯỚNG ĐƯỜNG, chỉ lệch chút cho tự nhiên. Chính chỗ này làm mắt
+                    // đọc ra là phiến đá được xếp xuôi theo lối đi, chứ không phải đá rơi vãi.
+                    float yaw = Quaternion.LookRotation(s.Tangent, Vector3.up).eulerAngles.y + Random.Range(-22f, 22f);
+                    if (PlacePathPiece(parent, slabs, spot, yaw, 0.95f, 1.55f))
+                        placed++;
+                }
+            }
+
+            // ---------- LỚP 2: đá nhỏ chèn khe ----------
+            foreach (var s in SampleCurve(start, control, end, 0.42f))
+            {
+                for (int k = 0; k < 2; k++)
+                {
+                    var spot = s.Point + s.Side * Random.Range(-halfWidth, halfWidth);
+                    if (Mathf.Abs(spot.x) > OpenFieldExtent || Mathf.Abs(spot.z) > OpenFieldExtent)
+                        continue;
+
+                    if (PlacePathPiece(parent, pebbles, spot, Random.Range(0f, 360f), 0.34f, 0.62f))
+                        placed++;
+                }
+            }
+
+            // ---------- LỚP 3: mép đường tan dần vào cỏ ----------
+            foreach (var s in SampleCurve(start, control, end, 0.55f))
+            {
+                for (int k = 0; k < 2; k++)
+                {
+                    // Càng ra xa tim đường thì khả năng có đá càng thấp.
+                    float t = Random.value;
+                    if (Random.value > 1f - t)
+                        continue;
+
+                    float lateral = halfWidth + t * 1.5f;
+                    var spot = s.Point + s.Side * (Random.value < 0.5f ? -lateral : lateral);
+                    if (Mathf.Abs(spot.x) > OpenFieldExtent || Mathf.Abs(spot.z) > OpenFieldExtent)
+                        continue;
+
+                    if (PlacePathPiece(parent, pebbles, spot, Random.Range(0f, 360f), 0.22f, 0.45f))
+                        placed++;
+                }
+            }
+
+            // ---------- Cỏ và hoa mọc chen trong khe đá ----------
+            foreach (var s in SampleCurve(start, control, end, 1.1f))
+            {
+                if (Random.value < 0.45f)
+                    continue;
+
+                var pool = (Random.value < 0.65f || flowers.Count == 0) ? grass : flowers;
+                if (pool.Count == 0)
+                    continue;
+
+                var spot = s.Point + s.Side * Random.Range(-halfWidth - 0.3f, halfWidth + 0.3f);
+                if (Mathf.Abs(spot.x) > OpenFieldExtent || Mathf.Abs(spot.z) > OpenFieldExtent)
+                    continue;
+
+                if (Place(parent, pool, spot, 0.14f, 0.30f) != null)
+                    placed++;
+            }
+
+            return placed;
+        }
+
+        /// <summary>Đặt một viên đá lát: co giãn theo BỀ NGANG, xoay theo góc cho sẵn, lún nhẹ xuống đất.</summary>
+        private static bool PlacePathPiece(Transform parent, List<GameObject> pool, Vector3 spot, float yaw, float minWidth, float maxWidth)
+        {
+            var prefab = pool[Random.Range(0, pool.Count)];
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            if (instance == null)
+                return false;
+
+            instance.transform.position = spot;
+            instance.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+            // Co giãn theo BỀ NGANG chứ không theo chiều cao: với một phiến đá nằm bẹt thì
+            // chiều cao gần như vô nghĩa (mọi viên đều dày 0.05-0.10), còn thứ quyết định
+            // nó chiếm bao nhiêu mặt đường lại là bề ngang.
+            ScaleToWidth(instance, prefab, minWidth, maxWidth);
+            AlignToGround(instance, sink: 0f);
+
+            // Mỗi viên lún một độ sâu hơi khác nhau. Chúng CHỒNG MÉP lên nhau, nên nếu cùng nằm
+            // đúng một cao độ thì hai mặt phẳng trùng nhau và card đồ hoạ không quyết được
+            // vẽ mặt nào trước, sinh ra vệt nhấp nháy mỗi khi camera nhúc nhích.
+            instance.transform.position += Vector3.down * Random.Range(0.015f, 0.06f);
+
+            instance.isStatic = true;
+            StripColliders(instance);
+            return true;
+        }
+
+        /// <summary>Một điểm đã lấy mẫu trên đường cong: vị trí, hướng đi tới, và hướng ngang.</summary>
+        private struct CurveSample
+        {
+            public Vector3 Point;
+            public Vector3 Tangent;
+            public Vector3 Side;
+        }
+
+        /// <summary>
+        /// Lấy mẫu đường cong bậc hai theo khoảng cách ĐỀU NHAU dọc theo đường.
+        ///
+        /// Không chia đều tham số t được: đường cong bậc hai chạy nhanh ở đoạn giữa và chậm ở
+        /// hai đầu, nên chia đều t sẽ cho ra đá dày cộm ở hai đầu và thưa ở giữa. Phải đi dọc
+        /// đường cong và cộng dồn quãng đường thật, cứ đủ một bước thì lấy một mẫu.
+        /// </summary>
+        private static IEnumerable<CurveSample> SampleCurve(Vector3 start, Vector3 control, Vector3 end, float spacing)
+        {
+            const int fine = 600;
+            Vector3 previous = start;
+            float accumulated = spacing;   // phát mẫu ngay từ điểm đầu
+
+            for (int i = 1; i <= fine; i++)
+            {
+                float t = i / (float)fine;
                 var a = Vector3.Lerp(start, control, t);
                 var b = Vector3.Lerp(control, end, t);
                 var point = Vector3.Lerp(a, b, t);
 
-                if (Mathf.Abs(point.x) > OpenFieldExtent || Mathf.Abs(point.z) > OpenFieldExtent)
+                var delta = point - previous;
+                accumulated += delta.magnitude;
+                var tangent = delta.sqrMagnitude > 0.000001f ? delta.normalized : Vector3.forward;
+                previous = point;
+
+                if (accumulated < spacing)
                     continue;
 
-                var tangent = (b - a).normalized;
-                var side = Vector3.Cross(Vector3.up, tangent);
-
-                for (int k = 0; k < lanes; k++)
+                accumulated = 0f;
+                yield return new CurveSample
                 {
-                    // Bỏ trống rất ít thôi: mặt đường phải liền mạch thì mới ra con đường.
-                    if (Random.value < 0.07f)
-                        continue;
-
-                    float laneOffset = Mathf.Lerp(-roadWidth * 0.5f, roadWidth * 0.5f, k / (float)(lanes - 1));
-                    var spot = point + side * (laneOffset + Random.Range(-0.04f, 0.04f));
-
-                    var prefab = pool[Random.Range(0, pool.Count)];
-                    var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-                    if (instance == null)
-                        continue;
-
-                    instance.transform.position = spot;
-
-                    // Xoay theo BỘI SỐ 90 ĐỘ, chỉ lệch nhẹ vài độ cho tự nhiên.
-                    //
-                    // Đây là chỗ quyết định đá lát được sát tới đâu. Xoay tự do mọi góc thì một viên
-                    // vuông cạnh 0.8 khi xoay 45 độ có đường chéo 1.13 — phình ra 40% và đè sang
-                    // hai viên bên cạnh. Muốn tránh đè thì phải thu viên đá nhỏ lại, mà nhỏ quá
-                    // thì mặt đường hở toang và nhìn ra chỉ là sỏi rơi vãi chứ không phải đường.
-                    // Xoay theo bội số 90 độ giữ nguyên bề ngang, nhờ vậy đá vừa to vừa sát nhau.
-                    instance.transform.rotation = Quaternion.Euler(0f, Random.Range(0, 4) * 90f + Random.Range(-6f, 6f), 0f);
-
-                    // Làn cách nhau 0.83 và bước dọc đường 0.79, nên bề ngang 0.55-0.68 để lại
-                    // khe hở khoảng 0.11-0.28 unit. Đây là con số đo được chứ không phải ước lượng:
-                    // để 0.62-0.74 thì khe trung bình ra ÂM 0.10, tức là vẫn còn đè nhau.
-                    ScaleToWidth(instance, prefab, 0.55f, 0.68f);
-                    AlignToGround(instance, sink: 0f);
-
-                    // Lún nhẹ để viên đá trông như đã nằm đó lâu ngày.
-                    instance.transform.position += Vector3.down * 0.03f;
-
-                    instance.isStatic = true;
-                    StripColliders(instance);
-                    placed++;
-                }
+                    Point = point,
+                    Tangent = tangent,
+                    Side = Vector3.Cross(Vector3.up, tangent),
+                };
             }
-
-            return placed;
         }
 
         // ============================================================ ĐẶT MỘT VẬT
