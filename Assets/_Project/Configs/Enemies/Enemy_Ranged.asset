@@ -51,6 +51,8 @@ MonoBehaviour:
     - rid: 4511735220291502087
       type: {class: PoisonEffect, ns: Survival.Combat.StatusEffects, asm: Assembly-CSharp}
       data:
+        _activeVfx: {fileID: 6355626027577431749, guid: 5eb0610e8696b234dbea408388acf51d, type: 3}
+        _activeVfxHeight: 0.7
         _damagePerTick: 30
         _tickInterval: 1
         _totalTicks: 4

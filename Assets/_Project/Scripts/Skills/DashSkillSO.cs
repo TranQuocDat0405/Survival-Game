@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Survival.Combat;
 using Survival.Pooling;
 using Survival.Stats;
@@ -35,6 +36,22 @@ namespace Survival.Skills
         [SerializeField, Tooltip("Nhân kích thước hiệu ứng nổ cho khớp bán kính thật.")]
         private float _effectScalePerUnitRadius = 1f;
 
+        [Header("Vệt bom dọc đường lướt — CHỈ LÀ HÌNH ẢNH")]
+        [SerializeField, Tooltip(
+            "Quả bom nhỏ rơi lại dọc đường lướt. Để trống thì không có vệt nào.\n\n" +
+            "ĐÂY THUẦN TUÝ LÀ TRANG TRÍ. Chúng không có va chạm và không gây một điểm sát thương " +
+            "nào — toàn bộ sát thương vẫn là MỘT vụ nổ duy nhất ở cuối cú lướt, đúng spec mục 3.3 " +
+            "(bán kính 3, 15 sát thương gốc). Vệt bom chỉ để mắt đọc được đường lướt vừa đi qua đâu.")]
+        private PooledObject _trailBombPrefab;
+
+        [SerializeField, Range(0, 8), Tooltip(
+            "Rơi lại mấy quả dọc đường. 3-4 quả là vừa: ít hơn thì không thành vệt, " +
+            "nhiều hơn thì lúc nổ cùng lúc lại thành một dải sáng che màn hình.")]
+        private int _trailBombCount = 3;
+
+        [SerializeField, Min(0f), Tooltip("Kích thước vụ nổ của mỗi quả bom trong vệt. Nhỏ hơn hẳn vụ nổ chính.")]
+        private float _trailExplosionScale = 0.35f;
+
         /// <summary>Tốc độ lướt suy ra từ quãng đường và thời gian. Spec 3 unit / 0.5 giây = 6 unit/giây.</summary>
         public float DashSpeed => _distance / _duration;
 
@@ -44,6 +61,9 @@ namespace Survival.Skills
         public float Radius => _radius;
         public PooledObject ExplosionEffectPrefab => _explosionEffectPrefab;
         public float EffectScalePerUnitRadius => _effectScalePerUnitRadius;
+        public PooledObject TrailBombPrefab => _trailBombPrefab;
+        public int TrailBombCount => _trailBombCount;
+        public float TrailExplosionScale => _trailExplosionScale;
 
         public override SkillRuntime CreateRuntime(SkillContext context) => new DashRuntime(this, context);
 
@@ -68,6 +88,14 @@ namespace Survival.Skills
 
         private readonly DashSkillSO _def;
         private bool _isDashing;
+
+        /// <summary>
+        /// Những quả bom trang trí đã rơi lại trên đường lướt của lần dash này.
+        ///
+        /// Cấp phát một lần rồi dùng lại mãi. Dash được bấm liên tục suốt trận, mà tạo một
+        /// danh sách mới mỗi lần là đều đặn ném rác cho bộ dọn rác — đúng thứ gây khựng hình.
+        /// </summary>
+        private readonly List<PooledObject> _trailBombs = new List<PooledObject>();
 
         public DashRuntime(DashSkillSO definition, SkillContext context) : base(definition, context)
         {
@@ -111,10 +139,27 @@ namespace Survival.Skills
             // và quãng đường lướt sẽ không còn đúng 3 unit trên mọi máy.
             // Đếm theo bước vật lý thì 0.5 giây luôn là đúng 25 bước x 0.02 giây,
             // cho ra 25 x 0.02 x 6 = 3.00 unit, giống nhau ở mọi cấu hình.
+            // Chuẩn bị rơi vệt bom. Khoảng cách giữa hai lần rơi tính theo THỜI GIAN chứ không
+            // theo quãng đường: lướt vào tường thì nhân vật đứng lại nhưng đồng hồ vẫn chạy,
+            // nên các quả bom sẽ dồn lại ngay chỗ đâm vào — đúng như một vệt bị chặn đứng.
+            _trailBombs.Clear();
+            int trailCount = _def.TrailBombPrefab != null ? _def.TrailBombCount : 0;
+            float trailInterval = trailCount > 0 ? _def.Duration / trailCount : float.MaxValue;
+            float nextTrailAt = 0f;
+
             while (elapsed < _def.Duration)
             {
                 if (rigidbody != null)
                     rigidbody.velocity = direction * speed;
+
+                // Rơi bom theo VỊ TRÍ THẬT ở thời điểm này, không phải vị trí tính trước.
+                // Nhờ vậy vệt bom luôn nằm đúng trên đường nhân vật thật sự đã đi qua,
+                // kể cả khi bị tường hay gốc cây chặn giữa chừng.
+                if (_trailBombs.Count < trailCount && elapsed >= nextTrailAt)
+                {
+                    nextTrailAt += trailInterval;
+                    DropTrailBomb();
+                }
 
                 yield return WaitForFixedStep;
                 elapsed += Time.fixedDeltaTime;
@@ -129,8 +174,50 @@ namespace Survival.Skills
             Explode();
         }
 
+        /// <summary>Thả một quả bom trang trí tại đúng chỗ nhân vật đang đứng.</summary>
+        private void DropTrailBomb()
+        {
+            if (PoolService.I == null || Context.Owner == null)
+                return;
+
+            var bomb = PoolService.I.Spawn(_def.TrailBombPrefab, Context.Owner.position, Quaternion.identity);
+            if (bomb != null)
+                _trailBombs.Add(bomb);
+        }
+
+        /// <summary>
+        /// Cho cả vệt bom nổ CÙNG MỘT LÚC với vụ nổ chính, rồi thu chúng về pool.
+        ///
+        /// Nhấn mạnh lại vì đây là chỗ dễ hiểu nhầm nhất trong cả kỹ năng này:
+        /// chúng KHÔNG gây thêm một điểm sát thương nào. Sát thương vẫn đúng spec mục 3.3 —
+        /// một lần duy nhất, bán kính 3, 15 sát thương gốc, tại chỗ kết thúc cú lướt.
+        /// Vệt bom chỉ để mắt người chơi đọc được đường lướt vừa đi qua đâu.
+        /// </summary>
+        private void DetonateTrailBombs()
+        {
+            for (int i = 0; i < _trailBombs.Count; i++)
+            {
+                var bomb = _trailBombs[i];
+                if (bomb == null)
+                    continue;
+
+                if (_def.ExplosionEffectPrefab != null && PoolService.I != null)
+                {
+                    var puff = PoolService.I.Spawn(_def.ExplosionEffectPrefab, bomb.transform.position, Quaternion.identity);
+                    if (puff != null)
+                        puff.transform.localScale = Vector3.one * _def.TrailExplosionScale;
+                }
+
+                bomb.ReturnToPool();
+            }
+
+            _trailBombs.Clear();
+        }
+
         private void Explode()
         {
+            DetonateTrailBombs();
+
             float multiplier = Context.Stats != null ? Context.Stats.Get(EStatType.DamageMultiplier) : 0f;
             float damage = CombatMath.ComputeOutgoing(_def.Damage, multiplier);
 

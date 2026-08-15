@@ -16,6 +16,21 @@ namespace Survival.Combat.StatusEffects
     [Serializable]
     public abstract class StatusEffectDefinition
     {
+        [SerializeField, Tooltip(
+            "Hiệu ứng BÁM TRÊN NGƯỜI suốt thời gian còn dính, ví dụ làn khói độc.\n\n" +
+            "Nó được gắn làm con của mục tiêu nên đi theo mục tiêu, và bị gỡ đúng lúc hiệu ứng " +
+            "hết hạn. Đây là cách người chơi biết mình ĐANG dính độc và còn dính bao lâu — " +
+            "khác hẳn với vụ nổ lúc đạn chạm, vốn chỉ báo 'vừa bị trúng' rồi thôi.\n\n" +
+            "Prefab dùng ở đây phải TẮT ô tự trả về pool trong PooledVfx, vì chỉ hệ thống " +
+            "hiệu ứng trạng thái mới biết khi nào nên gỡ nó ra.")]
+        private NFramework.PooledObject _activeVfx;
+
+        [SerializeField, Min(0f), Tooltip("Nâng hiệu ứng lên khỏi chân mục tiêu bao nhiêu unit, để nó quấn quanh thân chứ không nằm dưới đất.")]
+        private float _activeVfxHeight = 0.7f;
+
+        public NFramework.PooledObject ActiveVfx => _activeVfx;
+        public float ActiveVfxHeight => _activeVfxHeight;
+
         /// <summary>
         /// Khoá định danh loại hiệu ứng. Hai lần dính CÙNG một khoá thì được gộp làm một
         /// (làm mới thời gian) thay vì chạy song song — đây chính là luật "không stack" của spec.

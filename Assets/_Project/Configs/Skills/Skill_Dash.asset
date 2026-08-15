@@ -22,3 +22,6 @@ MonoBehaviour:
   _radius: 3
   _explosionEffectPrefab: {fileID: 7999321450360257594, guid: 9a7af5839b7c9e442856670fba6f8492, type: 3}
   _effectScalePerUnitRadius: 0.2
+  _trailBombPrefab: {fileID: 5952368940389032460, guid: ad5aad536234f5e4590b346db6d4f9b3, type: 3}
+  _trailBombCount: 3
+  _trailExplosionScale: 0.35

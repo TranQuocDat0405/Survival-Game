@@ -26,10 +26,18 @@ namespace Survival.Vfx
     /// </summary>
     public class PooledVfx : PooledObject
     {
+        [SerializeField, Tooltip(
+            "BẬT (mặc định) = diễn xong thì tự về pool. Dùng cho mọi hiệu ứng nổ một phát.\n\n" +
+            "TẮT = sống mãi cho tới khi có người gọi trả về. Dùng cho hiệu ứng BÁM DAI, ví dụ " +
+            "làn khói độc phải ở trên người đúng bằng thời gian dính độc — chỉ nơi gây ra hiệu ứng " +
+            "mới biết khi nào nó hết, nên để nó tự tắt theo đồng hồ là sai.")]
+        private bool _autoReturn = true;
+
         [SerializeField, Min(0f), Tooltip(
             "Sống bao lâu rồi tự về pool, tính bằng giây.\n\n" +
             "Để 0 thì tự đo lấy từ các hệ hạt bên trong — nên để 0 trong hầu hết trường hợp. " +
-            "Chỉ điền tay khi hiệu ứng có phần lặp vô hạn và cần cắt ngắn chủ động.")]
+            "Chỉ điền tay khi hiệu ứng có phần lặp vô hạn và cần cắt ngắn chủ động.\n" +
+            "Không có tác dụng khi đã tắt ô tự trả về ở trên.")]
         private float _lifetime;
 
         [SerializeField, Min(0f), Tooltip(
@@ -113,6 +121,9 @@ namespace Survival.Vfx
 
         private void Update()
         {
+            if (!_autoReturn)
+                return;
+
             _timer += Time.deltaTime;
 
             if (_timer >= _resolvedLifetime)

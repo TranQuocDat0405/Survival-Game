@@ -21,6 +21,21 @@ namespace Survival.Combat.StatusEffects
         private readonly List<string> _keys = new List<string>();
         private readonly List<string> _finishedBuffer = new List<string>();
 
+        /// <summary>
+        /// Hiệu ứng hình ảnh đang bám trên người, tra theo cùng khoá với hiệu ứng gây ra nó.
+        ///
+        /// Giữ riêng khỏi <see cref="_active"/> vì hai thứ có vòng đời khác nhau về nguyên tắc:
+        /// một cái là LUẬT CHƠI (trừ máu mỗi giây), cái kia là TRANG TRÍ. Gỡ hẳn phần hình ảnh
+        /// ra thì độc vẫn trừ máu đúng như cũ.
+        /// </summary>
+        private readonly Dictionary<string, NFramework.PooledObject> _activeVfx =
+            new Dictionary<string, NFramework.PooledObject>();
+
+        [SerializeField, Min(0f), Tooltip(
+            "Nâng thêm hiệu ứng bám người lên bao nhiêu unit, cộng vào con số khai báo trong " +
+            "hiệu ứng. Dùng khi cùng một hiệu ứng độc bám lên player và lên quái cao thấp khác nhau.")]
+        private float _vfxHeightOffset;
+
         private Health _health;
 
         /// <summary>Có đang dính hiệu ứng nào không. Dùng cho hiệu ứng hình ảnh (đổi màu nhân vật).</summary>
@@ -62,11 +77,59 @@ namespace Survival.Combat.StatusEffects
             _active[id] = runtime;
             _keys.Add(id);
 
+            SpawnActiveVfx(id, definition);
+
             runtime.OnApplied(isRefresh: false);
 
             // Hiệu ứng có thể kết thúc ngay trong tick đầu (ví dụ cấu hình chỉ 1 tick).
             if (runtime.IsFinished)
                 Remove(id);
+        }
+
+        /// <summary>
+        /// Bật hiệu ứng hình ảnh bám trên người, và GẮN NÓ LÀM CON của nhân vật.
+        ///
+        /// Gắn làm con là toàn bộ điểm mấu chốt: trước đây làn khói độc nổ ra tại chỗ viên đạn
+        /// chạm rồi NẰM LẠI ĐÓ, nên người chơi chạy đi vài bước là khói ở lại phía sau và trông
+        /// như độc đã hết trong khi máu vẫn đang tụt. Làm con thì khói đi theo người, và người
+        /// chơi đọc được đúng thứ cần đọc: "tôi đang dính độc".
+        /// </summary>
+        private void SpawnActiveVfx(string id, StatusEffectDefinition definition)
+        {
+            if (definition.ActiveVfx == null || Pooling.PoolService.I == null)
+                return;
+
+            if (_activeVfx.ContainsKey(id))
+                return;
+
+            Vector3 position = transform.position + Vector3.up * (definition.ActiveVfxHeight + _vfxHeightOffset);
+            var effect = Pooling.PoolService.I.Spawn(definition.ActiveVfx, position, Quaternion.identity);
+            if (effect == null)
+                return;
+
+            effect.transform.SetParent(transform, worldPositionStays: true);
+            _activeVfx[id] = effect;
+        }
+
+        /// <summary>
+        /// Tắt hiệu ứng hình ảnh và trả về pool.
+        ///
+        /// PHẢI gỡ khỏi cha trước khi trả về. Nếu không, hiệu ứng vẫn là con của nhân vật, và
+        /// khi nhân vật là quái được trả về pool thì hiệu ứng bị kéo theo — pool của hiệu ứng
+        /// mất dấu object của mình, và lần sau nó nằm nhầm chỗ trong cây phân cấp.
+        /// </summary>
+        private void DespawnActiveVfx(string id)
+        {
+            if (!_activeVfx.TryGetValue(id, out var effect))
+                return;
+
+            _activeVfx.Remove(id);
+
+            if (effect == null)
+                return;
+
+            effect.transform.SetParent(null, worldPositionStays: true);
+            effect.ReturnToPool();
         }
 
         private void Update() => Tick(Time.deltaTime);
@@ -124,6 +187,7 @@ namespace Survival.Combat.StatusEffects
         {
             _active.Remove(id);
             _keys.Remove(id);
+            DespawnActiveVfx(id);
         }
 
         /// <summary>Gỡ sạch mọi hiệu ứng. Gọi khi nhân vật chết hoặc được tái sử dụng từ pool.</summary>
@@ -131,7 +195,23 @@ namespace Survival.Combat.StatusEffects
         {
             _active.Clear();
             _keys.Clear();
+
+            // Dọn cả phần hình ảnh. Bỏ sót chỗ này thì làn khói độc sẽ ở lại trên cái xác,
+            // rồi theo cái xác về pool và xuất hiện lại trên con quái tiếp theo dù nó chưa
+            // hề dính độc — một lỗi rất khó lần ra vì nó chỉ lộ ở wave sau.
+            if (_activeVfx.Count == 0)
+                return;
+
+            _vfxKeyBuffer.Clear();
+            foreach (var key in _activeVfx.Keys)
+                _vfxKeyBuffer.Add(key);
+
+            for (int i = 0; i < _vfxKeyBuffer.Count; i++)
+                DespawnActiveVfx(_vfxKeyBuffer[i]);
         }
+
+        /// <summary>Danh sách phụ để gỡ hiệu ứng hình ảnh mà không sửa Dictionary trong lúc đang duyệt nó.</summary>
+        private readonly List<string> _vfxKeyBuffer = new List<string>();
 
         private void HandleDied(Health health) => ClearAll();
 
