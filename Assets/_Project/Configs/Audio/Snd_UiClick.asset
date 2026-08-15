@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Snd_UiClick
   m_EditorClassIdentifier: 
   clip: {fileID: 8300000, guid: edb3abdb2ec39c142a4ccf32a51d0cb1, type: 3}
-  volume: 0.4
+  volume: 0.3
   pitch: 1
   randomPitch: 1
   minRandomPitch: 0.95

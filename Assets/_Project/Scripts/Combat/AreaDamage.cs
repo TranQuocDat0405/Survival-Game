@@ -85,11 +85,19 @@ namespace Survival.Combat
         /// vừa sai spec vừa phá vỡ cân bằng.
         /// </summary>
         /// <param name="centers">Các tâm nổ. Chỉ đọc <paramref name="centerCount"/> phần tử đầu.</param>
+        /// <param name="radii">
+        /// Bán kính RIÊNG cho từng tâm, cùng thứ tự với <paramref name="centers"/>.
+        ///
+        /// Để riêng chứ không dùng chung một con số, vì các tâm nổ không nhất thiết ngang nhau:
+        /// ở cú lướt, điểm kết thúc mang đúng bán kính spec còn mấy quả rơi dọc đường thì nhỏ hơn.
+        /// Dùng chung một bán kính sẽ khiến vùng gây sát thương phình ra xa hơn hẳn thứ người chơi
+        /// nhìn thấy, và họ ăn đòn mà không hiểu vì sao.
+        /// </param>
         /// <returns>Số mục tiêu KHÁC NHAU đã trúng đòn.</returns>
         public static int ExplodeMultiPoint(
             List<Vector3> centers,
+            List<float> radii,
             int centerCount,
-            float radius,
             float rawDamage,
             EDamageSource source,
             GameObject instigator,
@@ -97,10 +105,10 @@ namespace Survival.Combat
         {
             AlreadyHit.Clear();
 
-            for (int c = 0; c < centerCount && c < centers.Count; c++)
+            for (int c = 0; c < centerCount && c < centers.Count && c < radii.Count; c++)
             {
                 int count = Physics.OverlapSphereNonAlloc(
-                    centers[c], radius, Buffer, targetMask, QueryTriggerInteraction.Collide);
+                    centers[c], radii[c], Buffer, targetMask, QueryTriggerInteraction.Collide);
 
                 for (int i = 0; i < count; i++)
                 {

@@ -54,8 +54,17 @@ namespace Survival.Skills
             "Để 0 thì quay về đúng spec gốc: một vụ nổ duy nhất ở điểm kết thúc.")]
         private int _trailBombCount = 3;
 
-        [SerializeField, Min(0f), Tooltip("Kích thước vụ nổ của mỗi quả bom trong vệt. Nhỏ hơn hẳn vụ nổ chính.")]
+        [SerializeField, Min(0f), Tooltip("Kích thước HÌNH ẢNH vụ nổ của mỗi quả bom trong vệt. Nhỏ hơn hẳn vụ nổ chính.")]
         private float _trailExplosionScale = 0.35f;
+
+        [SerializeField, Range(0.1f, 1f), Tooltip(
+            "Bán kính SÁT THƯƠNG của mỗi quả trong vệt, tính theo phần bán kính của vụ nổ chính.\n\n" +
+            "Để 1 thì mỗi quả cũng nổ rộng bằng vụ nổ chính, và vì chúng rải dọc đường lướt nên " +
+            "vùng gây sát thương phình ra xa hơn hẳn thứ người chơi nhìn thấy — họ ăn đòn từ một " +
+            "vụ nổ trông rất nhỏ ở cách đó mấy unit và không hiểu vì sao.\n\n" +
+            "Vụ nổ ở CUỐI cú lướt luôn giữ nguyên bán kính đầy đủ theo spec; ô này chỉ áp cho " +
+            "mấy quả rơi dọc đường, vốn là phần thêm ngoài spec.")]
+        private float _trailBlastRadiusFactor = 0.5f;
 
         /// <summary>Tốc độ lướt suy ra từ quãng đường và thời gian. Spec 3 unit / 0.5 giây = 6 unit/giây.</summary>
         public float DashSpeed => _distance / _duration;
@@ -69,6 +78,9 @@ namespace Survival.Skills
         public PooledObject TrailBombPrefab => _trailBombPrefab;
         public int TrailBombCount => _trailBombCount;
         public float TrailExplosionScale => _trailExplosionScale;
+
+        /// <summary>Bán kính sát thương của một quả bom trong vệt, tính ra unit.</summary>
+        public float TrailBlastRadius => _radius * _trailBlastRadiusFactor;
 
         public override SkillRuntime CreateRuntime(SkillContext context) => new DashRuntime(this, context);
 
@@ -107,6 +119,9 @@ namespace Survival.Skills
         /// Cũng dùng lại mãi thay vì cấp phát mới mỗi lần dash.
         /// </summary>
         private readonly List<Vector3> _blastCenters = new List<Vector3>();
+
+        /// <summary>Bán kính tương ứng với từng tâm nổ ở trên, cùng thứ tự.</summary>
+        private readonly List<float> _blastRadii = new List<float>();
 
         public DashRuntime(DashSkillSO definition, SkillContext context) : base(definition, context)
         {
@@ -213,7 +228,9 @@ namespace Survival.Skills
                     continue;
 
                 // Ghi lại chỗ quả bom đứng TRƯỚC khi trả nó về pool, vì đó cũng là một tâm nổ.
+                // Bán kính NHỎ HƠN vụ nổ chính, để vùng gây sát thương bám sát thứ mắt nhìn thấy.
                 _blastCenters.Add(bomb.transform.position);
+                _blastRadii.Add(_def.TrailBlastRadius);
 
                 if (_def.ExplosionEffectPrefab != null && PoolService.I != null)
                 {
@@ -231,6 +248,7 @@ namespace Survival.Skills
         private void Explode()
         {
             _blastCenters.Clear();
+            _blastRadii.Clear();
 
             DetonateTrailBombs();
 
@@ -239,14 +257,15 @@ namespace Survival.Skills
 
             Vector3 center = Context.Owner.position;
 
-            // Điểm kết thúc cú lướt luôn là một tâm nổ — đó là điều spec mô tả.
-            // Các quả bom dọc đường chỉ MỞ RỘNG VÙNG PHỦ ra sau lưng, chứ không nhân sát thương lên:
-            // mỗi con quái vẫn chỉ ăn đúng một lần, đúng bằng con số trong config.
+            // Điểm kết thúc cú lướt luôn là một tâm nổ, và nó GIỮ ĐÚNG BÁN KÍNH CỦA SPEC.
+            // Các quả bom dọc đường chỉ MỞ RỘNG VÙNG PHỦ ra sau lưng với bán kính nhỏ hơn,
+            // và không nhân sát thương lên: mỗi con quái vẫn chỉ ăn đúng một lần.
             _blastCenters.Add(center);
+            _blastRadii.Add(_def.Radius);
 
             AreaDamage.ExplodeMultiPoint(
-                _blastCenters, _blastCenters.Count,
-                _def.Radius, damage,
+                _blastCenters, _blastRadii, _blastCenters.Count,
+                damage,
                 EDamageSource.PlayerDash,
                 Context.OwnerGameObject,
                 Context.TargetMask);

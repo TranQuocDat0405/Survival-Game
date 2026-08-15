@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 47e4daab20cecf243a0ad4fbd9d7fb93, type: 3}
   m_Name: Snd_BombExplode
   m_EditorClassIdentifier: 
-  clip: {fileID: 8300000, guid: 16e6b46ef72fe714e933453070b08293, type: 3}
-  volume: 0.9
+  clip: {fileID: 8300000, guid: f182e84ea1f20774d83c0cebaabe424d, type: 3}
+  volume: 1
   pitch: 1
   randomPitch: 1
   minRandomPitch: 0.95

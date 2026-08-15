@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Snd_EnemyAttack
   m_EditorClassIdentifier: 
   clip: {fileID: 8300000, guid: 1edee453143a28f47874d2f65bbd2858, type: 3}
-  volume: 0.5
+  volume: 0.4
   pitch: 1
   randomPitch: 1
   minRandomPitch: 0.9

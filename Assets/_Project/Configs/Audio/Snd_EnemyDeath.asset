@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Snd_EnemyDeath
   m_EditorClassIdentifier: 
   clip: {fileID: 8300000, guid: 5e6722c14ca15e14baffd3e80d5f6579, type: 3}
-  volume: 0.65
+  volume: 0.6
   pitch: 1
   randomPitch: 1
   minRandomPitch: 0.88
