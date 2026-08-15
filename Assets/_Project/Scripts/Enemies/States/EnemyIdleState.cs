@@ -18,6 +18,11 @@ namespace Survival.Enemies.States
         {
             _timer = 0f;
             Enemy.StopMoving();
+
+            // Giữ ghim suốt quãng nghỉ. Đòn đánh đã ghim từ trước rồi nên dòng này chỉ là
+            // để trạng thái tự khai báo đầy đủ điều kiện của mình, không phụ thuộc vào việc
+            // trạng thái nào chạy trước nó.
+            Enemy.SetAnchored(true);
         }
 
         public override void OnUpdate(float deltaTime)

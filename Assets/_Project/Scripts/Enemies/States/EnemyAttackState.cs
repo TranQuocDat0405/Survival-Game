@@ -50,6 +50,12 @@ namespace Survival.Enemies.States
             // Quái đứng lại trong suốt đòn đánh. Đây là tín hiệu hình ảnh quan trọng:
             // người chơi thấy quái khựng lại thì biết đòn sắp tới và có cơ hội phản ứng.
             Enemy.StopMoving();
+
+            // Và đứng lại thật, không chỉ là "thôi không tự đi nữa".
+            // Ghim từ đây chứ không đợi tới lúc nghỉ, vì hình nón sát thương xuất phát từ
+            // vị trí quái tại đúng thời điểm ra đòn — bị con khác xô lệch trong lúc lấy đà
+            // là cú đánh trượt vì một lý do chẳng liên quan gì tới người chơi.
+            Enemy.SetAnchored(true);
         }
 
         public override void OnUpdate(float deltaTime)

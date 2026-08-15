@@ -146,7 +146,7 @@ namespace Survival.Enemies
             if (_collider == null) _collider = GetComponent<Collider>();
 
             _rigidbody.useGravity = false;
-            _rigidbody.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+            _rigidbody.constraints = BaseConstraints;
             _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
 
             Stats = new StatSet();
@@ -220,6 +220,12 @@ namespace Survival.Enemies
             _stuckTimer = 0f;
             _forcePathTimer = 0f;
             _lastPosition = _cachedTransform.position;
+
+            // Thả ghim. Quái lấy từ pool có thể đã chết ngay giữa lúc đang ghim ở đòn đánh
+            // trước, và nếu không trả ràng buộc về mặc định thì kiếp sau nó sinh ra đã bị
+            // khoá cứng hai trục ngang — đứng nguyên tại chỗ sinh cho tới hết ván.
+            SetAnchored(false);
+
             if (_collider != null)
                 _collider.enabled = true;
 
@@ -555,6 +561,47 @@ namespace Survival.Enemies
 
             _rigidbody.velocity = Vector3.zero;
             _rigidbody.angularVelocity = Vector3.zero;
+        }
+
+        /// <summary>
+        /// Ràng buộc nền của thân vật lý: luôn khoá xoay và khoá trục đứng.
+        ///
+        /// Khoá xoay vì việc xoay do code tự lo với đúng tốc độ trong config — để hệ vật lý
+        /// xoay thì va chạm sẽ làm quái quay tít. Khoá trục đứng vì sân phẳng, không có gì
+        /// để rơi, mà thả tự do thì một cú va chạm lệch cũng đủ đội quái lên khỏi mặt đất.
+        /// </summary>
+        private const RigidbodyConstraints BaseConstraints =
+            RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+
+        /// <summary>Ràng buộc lúc bị ghim: khoá thêm hai trục ngang nên không ai xô đi được.</summary>
+        private const RigidbodyConstraints AnchoredConstraints =
+            BaseConstraints | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
+
+        /// <summary>
+        /// Ghim quái tại chỗ, hoặc thả ra.
+        ///
+        /// VÌ SAO CẦN: spec bắt quái "tấn công xong thì đứng im 1 giây". Nhưng đứng im theo
+        /// nghĩa "không tự đi" thì chưa đủ — nó vẫn là một thân vật lý động, nên mấy con phía
+        /// sau đang lao tới sẽ húc vào và ĐẨY NÓ TRƯỢT tới trước. Nhìn ra thành cảnh cả đàn
+        /// xô nhau dồn cục vào người chơi, và quãng nghỉ một giây — vốn là khoảng thở duy nhất
+        /// của người chơi — biến mất.
+        ///
+        /// Ghim từ lúc BẮT ĐẦU VUNG ĐÒN chứ không phải chỉ trong một giây nghỉ. Lý do là độ
+        /// chính xác của đòn đánh: sát thương được tính bằng một hình nón xuất phát từ vị trí
+        /// quái tại đúng thời điểm ra đòn. Bị xô lệch đi trong lúc lấy đà là hình nón đó xuất
+        /// phát từ chỗ khác, và cú đánh trượt vì một lý do chẳng liên quan gì tới người chơi.
+        ///
+        /// DÙNG RÀNG BUỘC CHỨ KHÔNG CHUYỂN SANG KINEMATIC. Kinematic sẽ đổi hẳn loại thân vật lý
+        /// giữa chừng, kéo theo cả một họ lỗi "không được ghi vận tốc lên thân kinematic" mà dự án
+        /// này đã dính hai lần. Khoá trục thì thân vẫn là thân động bình thường: nó vẫn chặn
+        /// người chơi và chặn quái khác đúng như một tảng đá, chỉ là không bị đẩy đi.
+        /// </summary>
+        public void SetAnchored(bool anchored)
+        {
+            if (_rigidbody == null)
+                return;
+
+            _rigidbody.constraints = anchored ? AnchoredConstraints : BaseConstraints;
         }
 
         /// <summary>

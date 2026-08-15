@@ -9,6 +9,15 @@ namespace Survival.Enemies.States
     {
         public EnemyApproachState(EnemyActor enemy) : base(enemy) { }
 
+        /// <summary>
+        /// Thả ghim. Đây là trạng thái DUY NHẤT có di chuyển, nên nó cũng là chỗ duy nhất
+        /// cần thân vật lý tự do — vào đây thì thả, ra khỏi đây thì trạng thái kế tự ghim lại.
+        ///
+        /// Đặt luật ở hai đầu như vậy thì không có đường nào lọt: dù quái vào trạng thái tiếp cận
+        /// từ lúc mới sinh, sau một đòn đánh, hay sau khi mất mục tiêu, nó luôn được thả đúng lúc.
+        /// </summary>
+        public override void OnEnter() => Enemy.SetAnchored(false);
+
         public override void OnUpdate(float deltaTime)
         {
             if (!Enemy.HasTarget)

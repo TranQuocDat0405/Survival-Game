@@ -19,14 +19,27 @@
 | # | Yêu cầu | Giá trị spec | Trạng thái |
 |---|---|---|---|
 | 2.1 | Máu (HP) khởi đầu | 500 | ✅ |
-| 2.1 | Tốc độ di chuyển | 2 unit/s | ✅ |
-| 2.1 | Tốc độ xoay | 180 °/s | ✅ |
+| 2.1 | Tốc độ di chuyển | 2 unit/s | ⚠️ **đang để 3.2** — cố ý tune, xem ghi chú dưới |
+| 2.1 | Tốc độ xoay | 180 °/s | ⚠️ **đang để 360** — đo được đổi hướng 180° mất 0.50 s |
 | 2.1 | Giáp | 0 | ✅ |
 | 2.1 | Damage Multiplier | 0 | ✅ |
 | 2.1 | Bắn/bom/dash dùng **forward hiện tại**, không theo joystick | — | ✅ |
 | 2.2 | `Sát thương nhận = Sát thương gốc − Giáp`, clamp ≥ 0 | — | ✅ |
 | 2.2 | `Sát thương gây ra = gốc × (1 + DamageMultiplier)` | — | ✅ |
 | 2.2 | Giáp áp dụng cho **cả đòn chém lẫn độc** | — | ✅ |
+
+> ⚠️ **Hai chỗ cố ý lệch spec, đã được nhà tuyển dụng cho phép tune và người chơi chốt giữ nguyên
+> ngày 15/08/2026.** Ghi ra đây để không ai hiểu nhầm là làm sai, và **phải nhắc lại trong README
+> nộp bài**.
+>
+> Lý do: spec cho player 2 unit/s trong khi quái cận chiến chạy 3 unit/s — chênh lệch đó khiến
+> người chơi **không bao giờ thoát khỏi quái bằng cách chạy**, mọi tình huống đều phải dùng Dash,
+> và ván chơi mất hẳn phần di chuyển né tránh. Nâng lên 3.2 thì chạy vẫn không nhanh hơn quái
+> nhiều, nhưng đủ để kéo giãn khoảng cách trong lúc quái đứng nghỉ 1 giây.
+> Tốc độ xoay nâng theo cho tương xứng, vì chạy nhanh hơn mà xoay vẫn chậm thì điều khiển bị ì.
+>
+> Cả hai đều nằm trong `PlayerConfig.asset`, **đổi lại về đúng spec chỉ mất hai ô Inspector**,
+> không phải sửa một dòng code nào.
 
 ### 3. Kỹ năng nhân vật
 
@@ -389,13 +402,51 @@ tiếng ồn, ba cái này im lặng suốt mấy ngày mà bên dưới là m�
 
 ---
 
+---
+
+### 15/08/2026 — Quái nghỉ sau đòn đánh không còn bị xô đẩy
+
+Spec bắt quái "tấn công xong thì đứng im 1 giây". Nhưng đứng im theo nghĩa *không tự đi* thì
+chưa đủ: nó vẫn là một thân vật lý động, nên mấy con phía sau đang lao tới húc vào và **đẩy nó
+trượt tới trước**. Quãng nghỉ một giây — vốn là khoảng thở duy nhất của người chơi, vì quái
+chạy 3.0 còn player chỉ 2.0 theo spec — biến mất, và cả đàn nhìn như dồn cục.
+
+**Luật chọn: ghim khi KHÔNG ở trạng thái tiếp cận.** `Approach` là trạng thái duy nhất có di
+chuyển, nên nó cũng là chỗ duy nhất cần thân vật lý tự do. Đặt `SetAnchored(false)` ở
+`Approach.OnEnter` và `SetAnchored(true)` ở `Attack.OnEnter` + `Idle.OnEnter` — luật ở hai đầu
+nên không có đường nào lọt, dù quái vào tiếp cận từ lúc mới sinh, sau một đòn, hay sau khi mất
+mục tiêu.
+
+**Ghim từ lúc bắt đầu vung đòn chứ không chỉ trong một giây nghỉ.** Lý do là độ chính xác của
+đòn đánh: sát thương là một hình nón xuất phát từ vị trí quái *tại đúng thời điểm ra đòn*. Bị xô
+lệch trong 0.5 giây lấy đà là hình nón đó xuất phát từ chỗ khác, và cú đánh trượt vì một lý do
+chẳng liên quan gì tới người chơi.
+
+**Dùng ràng buộc trục chứ không chuyển sang kinematic.** Kinematic đổi hẳn loại thân vật lý giữa
+chừng, kéo theo cả họ lỗi "không được ghi vận tốc lên thân kinematic" mà dự án này đã dính hai
+lần. Khoá trục thì thân vẫn động bình thường: vẫn chặn người chơi và chặn quái khác đúng như một
+tảng đá, chỉ là không bị đẩy đi.
+
+**Cái bẫy phải chặn trước:** quái có thể **chết ngay giữa lúc đang bị ghim**, rồi được lấy lại
+từ pool cho wave sau. Không trả ràng buộc về mặc định trong `Setup` thì kiếp sau nó sinh ra đã
+bị khoá cứng hai trục ngang — đứng chôn chân tại chỗ sinh cho tới hết ván. Đây đúng là loại lỗi
+mà `Setup` đã có sẵn cả một khối chú thích cảnh báo.
+
+**Đo được:** trôi đi trong lúc đang đánh/nghỉ **0.340 unit** cộng dồn trên **60.6 giây** đứng
+yên của cả 6 con, tức khoảng 0.006 unit mỗi giây — nhiễu số học, coi như bằng không.
+Tác dụng phụ đáng chú ý: player đứng yên giữa 6 con giờ ăn **1260 sát thương / 15 giây** thay vì
+900. Không phải game bị làm khó thêm, mà là các đòn đánh nay **trúng đúng như spec** thay vì bị
+xô văng ra khỏi tầm giữa chừng.
+
+---
+
 ## 4. Việc còn lại (chốt cuối ngày 15/08/2026)
 
 Thứ tự này do người chơi chốt, không phải tôi tự sắp.
 
 | # | Việc | Ghi chú |
 |---|---|---|
-| 1 | Quái đang nghỉ 1 giây sau khi đánh **không được bị con sau xô đẩy** | Đã chốt cách làm: **ghim cứng** con đang nghỉ, biến nó thành vật cản không đẩy được; con phía sau tự vòng qua như vòng qua gốc cây — tận dụng luôn phần tìm đường vừa làm |
+| ~~1~~ | ~~Quái đang nghỉ không bị xô đẩy~~ | ✅ Xong — xem mục nhật ký ngay trên |
 | 2 | **Bonus mục 8 README** — camera shake, VFX, SFX | Ưu tiên trước hai việc dưới vì đây là mục **có điểm cộng thật**. Cinemachine Impulse; Cartoon FX Remaster đã import sẵn; SFX Kenney |
 | 3 | Hiệu ứng báo dính độc trên người player và cạnh thanh máu | Ý thêm, **ngoài spec** |
 | 4 | Bình hồi máu spawn định kỳ quanh player (10 s, tối đa 3, hồi 75) | Ý thêm, **ngoài spec** |
