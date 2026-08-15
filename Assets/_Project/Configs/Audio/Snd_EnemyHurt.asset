@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 47e4daab20cecf243a0ad4fbd9d7fb93, type: 3}
   m_Name: Snd_EnemyHurt
   m_EditorClassIdentifier: 
-  clip: {fileID: 8300000, guid: e4955a125c6ad084f88d61df1eb071cf, type: 3}
+  clip: {fileID: 8300000, guid: f906760571ffcd5498e9e84e3c99cb3d, type: 3}
   volume: 1
   pitch: 1
   randomPitch: 1

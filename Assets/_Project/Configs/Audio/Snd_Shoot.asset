@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 47e4daab20cecf243a0ad4fbd9d7fb93, type: 3}
   m_Name: Snd_Shoot
   m_EditorClassIdentifier: 
-  clip: {fileID: 8300000, guid: a020d3953419f51498eb7bf907e88575, type: 3}
-  volume: 0.55
+  clip: {fileID: 8300000, guid: 8199f4ff08bd4154491853b62b5e3a7d, type: 3}
+  volume: 0.65
   pitch: 1
   randomPitch: 1
   minRandomPitch: 0.92
