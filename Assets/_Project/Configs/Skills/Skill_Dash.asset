@@ -20,5 +20,5 @@ MonoBehaviour:
   _duration: 0.5
   _damage: 15
   _radius: 3
-  _explosionEffectPrefab: {fileID: 0}
-  _effectScalePerUnitRadius: 1
+  _explosionEffectPrefab: {fileID: 7999321450360257594, guid: 9a7af5839b7c9e442856670fba6f8492, type: 3}
+  _effectScalePerUnitRadius: 0.2

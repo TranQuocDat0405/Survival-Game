@@ -51,8 +51,8 @@ MonoBehaviour:
   EventOnBeforeReturnPool:
     m_PersistentCalls:
       m_Calls: []
-  _explosionEffectPrefab: {fileID: 0}
-  _effectScalePerUnitRadius: 1
+  _explosionEffectPrefab: {fileID: 372294691090051285, guid: db367d5c9f3c178489f09730fda816b2, type: 3}
+  _effectScalePerUnitRadius: 0.2
 --- !u!1001 &6125394438355588990
 PrefabInstance:
   m_ObjectHideFlags: 0

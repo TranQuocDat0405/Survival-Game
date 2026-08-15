@@ -94,6 +94,16 @@ namespace Survival.Config
             "ProjectileAttack cho quái đánh xa.")]
         private EnemyAttackDefinition _attack = new ConeMeleeAttack();
 
+        [Header("Hiệu ứng")]
+        [SerializeField, Tooltip(
+            "Hiệu ứng nổ ra tại chỗ quái chết. Để trống thì không có gì.\n\n" +
+            "Đặt ở đây chứ không đặt trên prefab quái, để mỗi LOẠI quái có thể có kiểu tan biến " +
+            "riêng mà vẫn dùng chung một prefab thân xác.")]
+        private NFramework.PooledObject _deathVfx;
+
+        [SerializeField, Min(0f), Tooltip("Nâng hiệu ứng chết lên khỏi mặt đất bao nhiêu, để nó nổ ngang thân chứ không dưới chân.")]
+        private float _deathVfxHeight = 0.8f;
+
         [Header("Phần thưởng")]
         [SerializeField, Min(0), Tooltip("EXP nhận được khi giết con quái này. Spec: 30.")]
         private int _expReward = 30;
@@ -107,6 +117,8 @@ namespace Survival.Config
         public bool TrackTargetDuringWindup => _trackTargetDuringWindup;
         public float WindupTrackingFactor => _windupTrackingFactor;
         public float WindupChaseFactor => _windupChaseFactor;
+        public NFramework.PooledObject DeathVfx => _deathVfx;
+        public float DeathVfxHeight => _deathVfxHeight;
         public EnemyAttackDefinition Attack => _attack;
         public int ExpReward => _expReward;
 

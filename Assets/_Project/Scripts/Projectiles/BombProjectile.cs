@@ -71,6 +71,11 @@ namespace Survival.Projectiles
                     effect.transform.localScale = Vector3.one * (_radius * _effectScalePerUnitRadius);
             }
 
+            // Bom là cú mạnh nhất trong game nên đây là một trong hai chỗ duy nhất được rung camera.
+            // Độ rung nằm trong CameraShakeService chứ không ở đây, để mọi mức rung của game
+            // đọc được cạnh nhau trên cùng một Inspector thay vì rải khắp các prefab.
+            CameraRig.CameraShakeService.I?.ShakeOnBombExplosion();
+
             ReturnToPool();
         }
 

@@ -148,6 +148,11 @@ namespace Survival.Skills
                 if (effect != null)
                     effect.transform.localScale = Vector3.one * (_def.Radius * _def.EffectScalePerUnitRadius);
             }
+
+            // Mặc định độ rung của cú này đang để 0, tức không rung — vì dash được dùng rất
+            // thường xuyên để né đòn. Vẫn gọi ở đây để ai muốn bật lại thì chỉ cần đổi một số
+            // trên Inspector, không phải sửa code.
+            Survival.CameraRig.CameraShakeService.I?.ShakeOnDashExplosion();
         }
     }
 }

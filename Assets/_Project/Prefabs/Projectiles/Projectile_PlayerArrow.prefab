@@ -52,7 +52,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _radius: 0.15
-  _hitEffectPrefab: {fileID: 0}
+  _hitEffectPrefab: {fileID: 5903408630519763980, guid: 751315d8b62587a49b2d108ad6d9101d, type: 3}
   _maxLifeTime: 6
   _environmentMask:
     serializedVersion: 2

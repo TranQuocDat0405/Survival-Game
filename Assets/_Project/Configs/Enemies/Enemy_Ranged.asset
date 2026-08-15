@@ -32,6 +32,8 @@ MonoBehaviour:
   _windupHoldRangeFactor: 0.95
   _attack:
     rid: 4511735220291502085
+  _deathVfx: {fileID: 526622539104969363, guid: 31a48e404610ab74b856fd339c69be56, type: 3}
+  _deathVfxHeight: 0.8
   _expReward: 30
   references:
     version: 2

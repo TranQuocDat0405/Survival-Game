@@ -647,6 +647,8 @@ namespace Survival.Enemies
             // Kinematic để hệ vật lý không đẩy cái xác trượt đi trong lúc chờ biến mất.
             _rigidbody.isKinematic = true;
 
+            SpawnDeathVfx();
+
             EnemyRegistry.I?.NotifyDied(this);
             OnDied?.Invoke(this);
 
@@ -658,6 +660,24 @@ namespace Survival.Enemies
                 StartCoroutine(DespawnAfterDelay());
             else
                 ReturnToPool();
+        }
+
+        /// <summary>
+        /// Nổ hiệu ứng tại chỗ quái vừa gục.
+        ///
+        /// Lấy từ pool chứ không tạo mới: một ván bình thường giết vài chục con, mà mỗi hiệu ứng
+        /// là cả một cụm hệ hạt — tạo rồi huỷ liên tục là nguồn rác lớn nhất trong cả trận đánh.
+        ///
+        /// Hiệu ứng KHÔNG gắn làm con của cái xác. Nếu gắn thì tới lúc xác được trả về pool
+        /// (1.35 giây sau) hiệu ứng cũng bị kéo đi theo và biến mất giữa chừng.
+        /// </summary>
+        private void SpawnDeathVfx()
+        {
+            if (_config == null || _config.DeathVfx == null || Pooling.PoolService.I == null)
+                return;
+
+            Vector3 position = _cachedTransform.position + Vector3.up * _config.DeathVfxHeight;
+            Pooling.PoolService.I.Spawn(_config.DeathVfx, position, Quaternion.identity);
         }
 
         private System.Collections.IEnumerator DespawnAfterDelay()
