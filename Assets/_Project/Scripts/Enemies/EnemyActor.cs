@@ -292,7 +292,13 @@ namespace Survival.Enemies
             _rigidbody.MoveRotation(Quaternion.RotateTowards(_rigidbody.rotation, desired, rotationSpeed * deltaTime));
         }
 
-        public void MoveTowardsTarget()
+        /// <param name="speedFactor">Nhân vào tốc độ chạy. 1 là chạy bình thường, 0 là đứng yên.</param>
+        /// <param name="stopDistance">
+        /// Tới gần hơn khoảng này thì dừng lại, tính bằng unit. Để 0 nghĩa là đi tới sát tận nơi.
+        /// Dùng khi quái chỉ cần GIỮ KHOẢNG CÁCH chứ không cần áp sát — nếu không nó ủi thẳng
+        /// vào người chơi rồi bị collider chặn, trông như đang húc đầu vào nhau.
+        /// </param>
+        public void MoveTowardsTarget(float speedFactor = 1f, float stopDistance = 0f)
         {
             var target = Target;
             if (target == null)
@@ -309,6 +315,18 @@ namespace Survival.Enemies
                 return;
             }
 
+            if (speedFactor <= 0f)
+            {
+                StopMoving();
+                return;
+            }
+
+            if (stopDistance > 0f && direction.sqrMagnitude <= stopDistance * stopDistance)
+            {
+                StopMoving();
+                return;
+            }
+
             // Cùng lý do với StopMoving: xác đã chuyển sang kinematic thì không được ghi vận tốc.
             if (_rigidbody.isKinematic)
                 return;
@@ -316,7 +334,7 @@ namespace Survival.Enemies
             direction.Normalize();
             direction = ResolveMoveDirection(target.position, direction);
 
-            _rigidbody.velocity = direction * Stats.Get(EStatType.MoveSpeed);
+            _rigidbody.velocity = direction * Stats.Get(EStatType.MoveSpeed) * speedFactor;
         }
 
         /// <summary>

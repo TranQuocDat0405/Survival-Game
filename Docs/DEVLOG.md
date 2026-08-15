@@ -440,6 +440,61 @@ xô văng ra khỏi tầm giữa chừng.
 
 ---
 
+### 15/08/2026 — Quái không còn đánh hụt khi người chơi đang chạy
+
+Người chơi báo quái hay vung vào chỗ trống. Tôi kiểm git trước khi kết luận, vì tôi vừa thêm
+phần ghim và nghi chính mình gây ra: nhưng bản trước đó (`95d3cc6`) đã có `StopMoving()` ngay ở
+`OnEnter` và chỉ gọi `RotateTowardsTarget`, **chưa bao giờ có `MoveTowardsTarget`**. Vậy quái
+đứng chôn chân suốt đòn đánh là hành vi có từ commit đầu tiên, không phải do phần ghim.
+
+**Gốc rễ là số học chứ không phải AI:**
+
+> Lấy đà mất **0.5 giây**. Player chạy **3.2 unit/giây** → đi được **1.6 unit** trong lúc quái
+> đứng yên. Tầm đánh chỉ **1.3**. Nghĩa là từ khoảnh khắc quái quyết định vung đòn, chỉ cần
+> người chơi còn chạy là đòn đó đã thua về khoảng cách.
+
+Đây chính là hệ quả kéo theo của việc nâng tốc độ player lên 3.2 (spec cho 2.0, quái 3.0):
+người chơi giờ **nhanh hơn quái**, nên quái vừa hụt vừa không đuổi lại được.
+
+**Cách sửa: cho quái ĐI THEO trong lúc lấy đà**, chứ không chỉ xoay theo. Hai số mới trong
+`EnemyConfigSO`, đều chỉnh được trên Inspector:
+
+| Trường | Quái cận chiến | Quái đánh xa | Ý nghĩa |
+|---|---|---|---|
+| `_windupChaseFactor` | 1.0 | **0** | Bám theo với bao nhiêu phần tốc độ chạy |
+| `_windupHoldRangeFactor` | 0.7 | 0.95 | Dừng lại ở bao nhiêu phần tầm đánh |
+
+Quái đánh xa cố ý để **0**: spec bảo nó đứng ở khoảng cách 3 unit mà bắn, và đạn đã bay ra thì
+người chơi né được là chuyện công bằng.
+
+Khoảng giữ 0.7 × 1.3 = **0.91 unit** là để quái không ủi thẳng vào người chơi rồi bị collider
+chặn lại — trông như hai bên húc đầu vào nhau.
+
+**Đo bằng khoảng cách tại đúng khoảnh khắc ra đòn**, chứ không đếm số đòn trúng — vì đếm đòn bị
+nhiễu bởi thời gian quái chạy lại gần giữa hai chu kỳ:
+
+| Hệ số bám | Khoảng cách lúc ra đòn | Tỉ lệ trúng |
+|---|---|---|
+| **0** (hành vi cũ) | 1.24 – 2.19 | **60%** |
+| **1.0** (đã sửa) | 0.85 – 0.87 | **100%** |
+
+**Counterplay vẫn còn nguyên** — đây là điều kiện bắt buộc, không phải điểm cộng. Dash đi 3 unit
+trong 0.5 giây tức 6 unit/giây, gấp đôi tốc độ bám của quái. Test bằng cách tự động Dash ngay khi
+quái bắt đầu vung đòn: hai đòn rơi vào lúc đang Dash đo được **1.61 và 2.03 unit** → trượt cả
+hai, các đòn còn lại 0.87 → trúng. Đúng điểm cân bằng cần giữ: **đi bộ không thoát, Dash thì
+thoát.**
+
+**Một chi tiết dễ hiểu nhầm:** trong phiên chơi mà người chơi đứng yên, quãng đường quái đi trong
+lúc lấy đà đo được là **0.00 unit**. Đó không phải lỗi — player đứng yên thì quái đã nằm trong
+khoảng giữ 0.91 nên không cần nhích. Nó chỉ đuổi khi người chơi thật sự bỏ chạy, nhờ vậy vẫn giữ
+được nhịp "quái khựng lại rồi mới đánh" mà người chơi đọc được.
+
+**Phạm vi ghim đổi theo:** thả trong lúc lấy đà (vì lúc đó nó phải bám), ghim từ **đúng khoảnh
+khắc ra đòn** cho tới hết một giây nghỉ. Kiểm chứng 45 giây chơi tự nhiên: **0 vi phạm trên 3267
+lần kiểm tra**, trôi **0.000 unit** trong 33 giây đứng nghỉ cộng dồn.
+
+---
+
 ## 4. Việc còn lại (chốt cuối ngày 15/08/2026)
 
 Thứ tự này do người chơi chốt, không phải tôi tự sắp.

@@ -28,12 +28,24 @@ namespace Survival.Enemies.States
     ///    đánh trúng cả khi player đã chạy ra xa — ăn gian và cảm giác rất tệ.
     ///    Đọc tại thời điểm ra đòn thì né được là né thật, công bằng cho cả hai phía.
     ///
-    /// 4. TRONG LÚC LẤY ĐÀ, QUÁI VẪN XOAY THEO PLAYER NHƯNG CHẬM LẠI.
-    ///    Đây chính là chỗ sửa lỗi "player chỉ cần đi ngang là đòn nào cũng trượt".
-    ///    Đứng im hoàn toàn thì quái vung vào chỗ trống mỗi lần player nhúc nhích.
-    ///    Xoay bám 100% thì không bao giờ né được, đòn đánh mất hết ý nghĩa.
-    ///    Xoay với một nửa tốc độ (chỉnh được trong config) là điểm cân bằng:
-    ///    đi bộ ngang thì vẫn trúng, nhưng Dash (6 unit/giây) thì thoát được.
+    /// 4. TRONG LÚC LẤY ĐÀ, QUÁI VỪA XOAY VỪA ĐI THEO PLAYER.
+    ///    Đây là chỗ sửa lỗi "player chỉ cần chạy là đòn nào cũng trượt", và nó là lỗi SỐ HỌC
+    ///    chứ không phải lỗi AI: lấy đà mất 0.5 giây, mà player chạy 3.2 unit/giây thì trong
+    ///    0.5 giây đó đã đi được 1.6 unit — xa gấp rưỡi tầm đánh 1.3. Quái đứng chôn chân thì
+    ///    chỉ cần người chơi còn chạy là MỌI ĐÒN ĐỀU HỤT.
+    ///    Đo được: player đứng yên ăn 3 đòn / 5 giây, player chạy chỉ ăn 1.
+    ///
+    ///    Cho quái bám đủ tốc độ 3.0 thì khoảng cách chỉ nới ra 0.1 unit, đòn vẫn trúng.
+    ///    Nhưng Dash (6 unit/giây) vẫn nới ra được 1.5 unit nên vẫn né được.
+    ///    Đó chính là điểm cân bằng cần giữ: ĐI BỘ KHÔNG THOÁT, DASH THÌ THOÁT.
+    ///
+    ///    Quái chỉ bám tới một khoảng cách giữ nhất định rồi dừng, chứ không ủi thẳng vào
+    ///    người chơi — nếu không hai collider húc vào nhau trông rất kỳ.
+    ///
+    /// 5. GHIM CỨNG TỪ KHOẢNH KHẮC RA ĐÒN CHO TỚI HẾT QUÃNG NGHỈ.
+    ///    Trước đó thì không, vì lúc lấy đà quái còn phải bám theo player. Nhưng từ lúc đòn
+    ///    đã ra, spec bảo nó đứng im — và đứng im phải là đứng im thật, không con nào đẩy
+    ///    nó trượt đi được. Chi tiết ở <c>EnemyActor.SetAnchored</c>.
     /// </summary>
     public class EnemyAttackState : EnemyState
     {
@@ -47,15 +59,15 @@ namespace Survival.Enemies.States
             _timer = 0f;
             _damageApplied = false;
 
-            // Quái đứng lại trong suốt đòn đánh. Đây là tín hiệu hình ảnh quan trọng:
-            // người chơi thấy quái khựng lại thì biết đòn sắp tới và có cơ hội phản ứng.
+            // Quái khựng lại một nhịp. Đây là tín hiệu hình ảnh quan trọng:
+            // người chơi thấy quái dừng vung tay thì biết đòn sắp tới và có cơ hội phản ứng.
             Enemy.StopMoving();
 
-            // Và đứng lại thật, không chỉ là "thôi không tự đi nữa".
-            // Ghim từ đây chứ không đợi tới lúc nghỉ, vì hình nón sát thương xuất phát từ
-            // vị trí quái tại đúng thời điểm ra đòn — bị con khác xô lệch trong lúc lấy đà
-            // là cú đánh trượt vì một lý do chẳng liên quan gì tới người chơi.
-            Enemy.SetAnchored(true);
+            // CHƯA ghim vội. Trong lúc lấy đà quái còn phải bám theo player (xem OnUpdate),
+            // nên nó cần thân vật lý tự do. Ghim ngay từ đây sẽ khoá luôn cả việc bám đó.
+            // Ngoại lệ: nếu config tắt hẳn việc bám thì quái đứng yên suốt đòn đánh — mà đã
+            // đứng yên thì ghim luôn, không có lý do gì để bị con khác xô lệch khỏi hướng đã ngắm.
+            Enemy.SetAnchored(!Enemy.Config.TrackTargetDuringWindup);
         }
 
         public override void OnUpdate(float deltaTime)
@@ -66,9 +78,12 @@ namespace Survival.Enemies.States
 
             if (!_damageApplied)
             {
-                // Quyết định 4: bám theo player trong lúc lấy đà, với tốc độ xoay giảm bớt.
+                // Quyết định 4: bám theo player trong lúc lấy đà — xoay chậm lại, và ĐI THEO.
                 if (config.TrackTargetDuringWindup)
+                {
                     Enemy.RotateTowardsTarget(deltaTime, config.WindupTrackingFactor);
+                    Enemy.MoveTowardsTarget(config.WindupChaseFactor, config.WindupHoldDistance);
+                }
 
                 // Quyết định 1 và 3: tới đúng thời điểm thì ra đòn,
                 // và đòn đánh tự đọc vị trí player NGAY LÚC NÀY.
@@ -76,6 +91,11 @@ namespace Survival.Enemies.States
                 {
                     Enemy.ExecuteAttack();
                     _damageApplied = true;
+
+                    // Đòn đã ra. TỪ ĐÂY quái mới thật sự đứng im — hết phần thu tay rồi tới
+                    // trọn một giây nghỉ — và trong suốt quãng đó không con nào xô nó đi được.
+                    Enemy.StopMoving();
+                    Enemy.SetAnchored(true);
                 }
 
                 return;

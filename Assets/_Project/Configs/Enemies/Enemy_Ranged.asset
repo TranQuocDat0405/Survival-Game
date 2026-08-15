@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: Enemy_Ranged
   m_EditorClassIdentifier: 
   _displayName: "Qu\xE1i t\u1EA7m xa"
-  _visualPrefab: {fileID: 0}
   _visualScale: 1
   _baseStats:
   - Type: 0
@@ -29,6 +28,8 @@ MonoBehaviour:
   _idleAfterAttack: 1
   _trackTargetDuringWindup: 1
   _windupTrackingFactor: 0.5
+  _windupChaseFactor: 0
+  _windupHoldRangeFactor: 0.95
   _attack:
     rid: 4511735220291502085
   _expReward: 30

@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: Enemy_Melee
   m_EditorClassIdentifier: 
   _displayName: "Qu\xE1i c\u1EADn chi\u1EBFn"
-  _visualPrefab: {fileID: 0}
   _visualScale: 1
   _baseStats:
   - Type: 0
@@ -29,6 +28,8 @@ MonoBehaviour:
   _idleAfterAttack: 1
   _trackTargetDuringWindup: 1
   _windupTrackingFactor: 0.5
+  _windupChaseFactor: 1
+  _windupHoldRangeFactor: 0.7
   _attack:
     rid: 4511735220291502081
   _expReward: 30

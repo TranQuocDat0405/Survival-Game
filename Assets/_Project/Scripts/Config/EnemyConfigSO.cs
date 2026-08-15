@@ -67,6 +67,27 @@ namespace Survival.Config
         [SerializeField, Range(0f, 1f), Tooltip("Tốc độ xoay trong lúc lấy đà, so với tốc độ xoay bình thường.")]
         private float _windupTrackingFactor = 0.5f;
 
+        [SerializeField, Range(0f, 2f), Tooltip(
+            "Trong lúc lấy đà, quái ĐUỔI THEO player với bao nhiêu phần tốc độ chạy bình thường.\n" +
+            "Để 0 thì nó đứng chôn chân suốt đòn đánh.\n\n" +
+            "VÌ SAO CẦN: lấy đà mất 0.5 giây, mà player chạy 3.2 unit/giây thì trong 0.5 giây đó " +
+            "đã đi được 1.6 unit — xa gấp rưỡi tầm đánh 1.3. Nghĩa là nếu quái đứng yên, chỉ cần " +
+            "người chơi còn chạy là MỌI ĐÒN ĐỀU HỤT. Đo được: player đứng yên ăn 3 đòn / 5 giây, " +
+            "player chạy chỉ ăn 1.\n\n" +
+            "Để 1 (bám đủ tốc độ) thì khoảng cách chỉ nới ra 0.1 unit trong lúc lấy đà nên đòn " +
+            "vẫn trúng, NHƯNG Dash (6 unit/giây) vẫn nới ra được 1.5 unit nên vẫn né được. " +
+            "Đó chính là điểm cân bằng cần giữ: đi bộ không thoát, Dash thì thoát.\n\n" +
+            "Quái đánh xa nên để 0 — spec bảo nó đứng ở khoảng cách 3 unit mà bắn, " +
+            "và đạn bay ra thì người chơi né được là chuyện công bằng.")]
+        private float _windupChaseFactor = 1f;
+
+        [SerializeField, Range(0.3f, 1f), Tooltip(
+            "Trong lúc đuổi theo, quái dừng lại khi còn cách player bao nhiêu phần của tầm đánh.\n\n" +
+            "Không có ngưỡng này thì quái ủi thẳng vào người chơi và bị collider chặn lại, " +
+            "trông như đang húc đầu vào nhau. Dừng sớm hơn tầm đánh một chút thì nó giữ đúng " +
+            "khoảng cách vung vũ khí.")]
+        private float _windupHoldRangeFactor = 0.7f;
+
         [Header("Đòn đánh")]
         [SerializeReference, Tooltip(
             "Chọn kiểu đòn ở danh sách xổ xuống. ConeMeleeAttack cho quái đánh gần, " +
@@ -85,11 +106,18 @@ namespace Survival.Config
         public float IdleAfterAttack => _idleAfterAttack;
         public bool TrackTargetDuringWindup => _trackTargetDuringWindup;
         public float WindupTrackingFactor => _windupTrackingFactor;
+        public float WindupChaseFactor => _windupChaseFactor;
         public EnemyAttackDefinition Attack => _attack;
         public int ExpReward => _expReward;
 
         /// <summary>Tầm cần vào tới để ra đòn. Lấy thẳng từ đòn đánh nên không bị lệch hai nơi.</summary>
         public float AttackRange => _attack != null ? _attack.Range : 1f;
+
+        /// <summary>
+        /// Khoảng cách quái giữ khi đuổi theo trong lúc lấy đà, tính ra unit.
+        /// Suy ra từ tầm đánh nên chỉnh tầm đánh là nó tự khớp theo, không phải nhớ sửa hai chỗ.
+        /// </summary>
+        public float WindupHoldDistance => AttackRange * _windupHoldRangeFactor;
 
 #if UNITY_EDITOR
         private void OnValidate()
