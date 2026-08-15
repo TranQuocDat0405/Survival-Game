@@ -2119,9 +2119,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa895ac3f38ff3e4782bc38a619c14e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _animator: {fileID: 0}
+  _animator: {fileID: 5022014017134451863}
   _enemy: {fileID: 5169443479576234013}
-  _attackClipLength: 1
+  _attackClipLength: 0.87
   _speedDamping: 14
 --- !u!114 &629921729500807896
 MonoBehaviour:
