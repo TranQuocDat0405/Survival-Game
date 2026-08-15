@@ -21,7 +21,8 @@ namespace Survival.CameraRig
     ///
     /// LƯU Ý VỀ BỘ CARTOON FX: bản thân nó cũng có cơ chế rung camera riêng, và mặc định là BẬT.
     /// Để nguyên thì mỗi hiệu ứng lại tự rung một kiểu, kể cả những hiệu ứng ta cố ý không muốn
-    /// rung. Lớp này tắt hẳn cơ chế đó đi để rung chỉ đến từ đúng một nơi — chính là đây.
+    /// rung. Cơ chế đó bị tắt trong <see cref="Survival.Vfx.CartoonFxGlobalSettings"/>, nhờ vậy
+    /// mọi rung của game đều đi qua đúng một nơi — chính là lớp này.
     /// </summary>
     [RequireComponent(typeof(CinemachineImpulseSource))]
     public class CameraShakeService : SingletonMono<CameraShakeService>
@@ -54,9 +55,6 @@ namespace Survival.CameraRig
         {
             base.Awake();
             _source = GetComponent<CinemachineImpulseSource>();
-
-            // Tắt rung riêng của bộ Cartoon FX. Đây là cờ tĩnh nên chỉ cần đặt một lần.
-            DisableThirdPartyCameraShake();
         }
 
         public void ShakeOnBombExplosion() => Shake(_bombExplosionForce);
@@ -73,37 +71,5 @@ namespace Survival.CameraRig
             _source.GenerateImpulseWithForce(force);
         }
 
-        /// <summary>
-        /// Tắt cơ chế rung camera có sẵn trong bộ Cartoon FX.
-        ///
-        /// Gọi qua phản chiếu để dự án vẫn biên dịch được nếu sau này gỡ bộ đó ra —
-        /// và vì đây là code chạy đúng một lần lúc khởi động nên chi phí không đáng kể.
-        ///
-        /// PHẢI DUYỆT QUA MỌI ASSEMBLY chứ không đoán tên. Bộ Cartoon FX có asmdef riêng nên
-        /// lớp của nó nằm trong <c>CFXRRuntime</c> chứ không phải <c>Assembly-CSharp</c> như
-        /// script thường. Lần đầu tôi viết theo suy đoán đó và hàm này im lặng không làm gì cả —
-        /// không lỗi, không cảnh báo, chỉ là rung vẫn đến từ hai nguồn. Duyệt hết thì đúng dù
-        /// bộ asset có được sắp xếp lại thế nào.
-        /// </summary>
-        private static void DisableThirdPartyCameraShake()
-        {
-            var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
-
-            for (int i = 0; i < assemblies.Length; i++)
-            {
-                var type = assemblies[i].GetType("CartoonFX.CFXR_Effect", throwOnError: false);
-                if (type == null)
-                    continue;
-
-                var field = type.GetField("GlobalDisableCameraShake",
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-
-                if (field == null || field.FieldType != typeof(bool))
-                    continue;
-
-                field.SetValue(null, true);
-                return;
-            }
-        }
     }
 }

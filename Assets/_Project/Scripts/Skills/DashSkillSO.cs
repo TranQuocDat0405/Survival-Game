@@ -36,17 +36,22 @@ namespace Survival.Skills
         [SerializeField, Tooltip("Nhân kích thước hiệu ứng nổ cho khớp bán kính thật.")]
         private float _effectScalePerUnitRadius = 1f;
 
-        [Header("Vệt bom dọc đường lướt — CHỈ LÀ HÌNH ẢNH")]
+        [Header("Vệt bom dọc đường lướt")]
         [SerializeField, Tooltip(
-            "Quả bom nhỏ rơi lại dọc đường lướt. Để trống thì không có vệt nào.\n\n" +
-            "ĐÂY THUẦN TUÝ LÀ TRANG TRÍ. Chúng không có va chạm và không gây một điểm sát thương " +
-            "nào — toàn bộ sát thương vẫn là MỘT vụ nổ duy nhất ở cuối cú lướt, đúng spec mục 3.3 " +
-            "(bán kính 3, 15 sát thương gốc). Vệt bom chỉ để mắt đọc được đường lướt vừa đi qua đâu.")]
+            "Quả bom nhỏ rơi lại dọc đường lướt. Để trống thì chỉ nổ một điểm ở cuối như spec gốc.\n\n" +
+            "MỤC ĐÍCH LÀ MỞ RỘNG VÙNG PHỦ, KHÔNG PHẢI TĂNG SÁT THƯƠNG.\n" +
+            "Lý do nằm ở hình học của chính kỹ năng này: dash là để CHẠY KHỎI đám quái, nên tới lúc " +
+            "nổ ở điểm cuối thì mấy con đang bám sau lưng đã ra ngoài tầm. Đo được: quái áp sát ở " +
+            "1.3 unit, player lướt 3 unit, mấy con phía sau kết thúc ở 4.3 unit — ngoài hẳn bán kính 3, " +
+            "và chỉ 2 trên 6 con bị dính.\n\n" +
+            "Rải vụ nổ dọc đường thì phủ đúng chỗ đám đang đuổi đứng. MỖI CON VẪN CHỈ ĂN ĐÚNG MỘT LẦN " +
+            "với đúng con số sát thương trong ô bên trên — vùng nổ rộng ra, sức sát thương không đổi.")]
         private PooledObject _trailBombPrefab;
 
         [SerializeField, Range(0, 8), Tooltip(
-            "Rơi lại mấy quả dọc đường. 3-4 quả là vừa: ít hơn thì không thành vệt, " +
-            "nhiều hơn thì lúc nổ cùng lúc lại thành một dải sáng che màn hình.")]
+            "Rơi lại mấy quả dọc đường. 3-4 quả là vừa: ít hơn thì không phủ hết đường lướt, " +
+            "nhiều hơn thì lúc nổ cùng lúc lại thành một dải sáng che màn hình.\n" +
+            "Để 0 thì quay về đúng spec gốc: một vụ nổ duy nhất ở điểm kết thúc.")]
         private int _trailBombCount = 3;
 
         [SerializeField, Min(0f), Tooltip("Kích thước vụ nổ của mỗi quả bom trong vệt. Nhỏ hơn hẳn vụ nổ chính.")]
@@ -96,6 +101,12 @@ namespace Survival.Skills
         /// danh sách mới mỗi lần là đều đặn ném rác cho bộ dọn rác — đúng thứ gây khựng hình.
         /// </summary>
         private readonly List<PooledObject> _trailBombs = new List<PooledObject>();
+
+        /// <summary>
+        /// Các tâm nổ của lần lướt này: chỗ từng quả bom rơi, cộng thêm điểm kết thúc cú lướt.
+        /// Cũng dùng lại mãi thay vì cấp phát mới mỗi lần dash.
+        /// </summary>
+        private readonly List<Vector3> _blastCenters = new List<Vector3>();
 
         public DashRuntime(DashSkillSO definition, SkillContext context) : base(definition, context)
         {
@@ -201,6 +212,9 @@ namespace Survival.Skills
                 if (bomb == null)
                     continue;
 
+                // Ghi lại chỗ quả bom đứng TRƯỚC khi trả nó về pool, vì đó cũng là một tâm nổ.
+                _blastCenters.Add(bomb.transform.position);
+
                 if (_def.ExplosionEffectPrefab != null && PoolService.I != null)
                 {
                     var puff = PoolService.I.Spawn(_def.ExplosionEffectPrefab, bomb.transform.position, Quaternion.identity);
@@ -216,6 +230,8 @@ namespace Survival.Skills
 
         private void Explode()
         {
+            _blastCenters.Clear();
+
             DetonateTrailBombs();
 
             float multiplier = Context.Stats != null ? Context.Stats.Get(EStatType.DamageMultiplier) : 0f;
@@ -223,8 +239,14 @@ namespace Survival.Skills
 
             Vector3 center = Context.Owner.position;
 
-            AreaDamage.Explode(
-                center, _def.Radius, damage,
+            // Điểm kết thúc cú lướt luôn là một tâm nổ — đó là điều spec mô tả.
+            // Các quả bom dọc đường chỉ MỞ RỘNG VÙNG PHỦ ra sau lưng, chứ không nhân sát thương lên:
+            // mỗi con quái vẫn chỉ ăn đúng một lần, đúng bằng con số trong config.
+            _blastCenters.Add(center);
+
+            AreaDamage.ExplodeMultiPoint(
+                _blastCenters, _blastCenters.Count,
+                _def.Radius, damage,
                 EDamageSource.PlayerDash,
                 Context.OwnerGameObject,
                 Context.TargetMask);

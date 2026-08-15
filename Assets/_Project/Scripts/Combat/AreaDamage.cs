@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Survival.Combat
@@ -61,6 +62,67 @@ namespace Survival.Combat
             // Nếu sau này nhân vật có nhiều collider (đầu, thân, chân) thì phải thêm
             // danh sách chống trùng ở đây.
             return hitCount;
+        }
+
+        /// <summary>
+        /// Danh sách những mục tiêu đã ăn đòn trong CÙNG MỘT vụ nổ nhiều điểm.
+        /// Cấp phát sẵn một lần và dùng lại, vì dash được bấm liên tục suốt trận.
+        /// </summary>
+        private static readonly List<IDamageable> AlreadyHit = new List<IDamageable>(16);
+
+        /// <summary>
+        /// Nổ tại NHIỀU ĐIỂM cùng một lúc, nhưng mỗi mục tiêu chỉ ăn đòn ĐÚNG MỘT LẦN.
+        ///
+        /// Dùng cho cú lướt: vụ nổ được rải dọc đường vừa lướt qua thay vì dồn hết vào điểm
+        /// kết thúc. Lý do là hình học của chính kỹ năng này — dash là để CHẠY KHỎI đám quái,
+        /// nên tới lúc nổ ở điểm cuối thì mấy con đang bám sau lưng đã nằm ngoài tầm.
+        /// Đo được: quái áp sát ở 1.3 unit, player lướt 3 unit, mấy con phía sau kết thúc ở
+        /// 4.3 unit — ngoài hẳn bán kính 3, và chỉ 2 trên 6 con bị dính.
+        ///
+        /// CHỐNG TRÙNG LÀ BẮT BUỘC, không phải tuỳ chọn. Ba điểm nổ đặt cách nhau khoảng 1 unit
+        /// mà bán kính mỗi điểm là 3, nên các vùng nổ chồng lên nhau rất nhiều. Không chống trùng
+        /// thì một con đứng giữa sẽ ăn ba lần sát thương, và cú lướt bỗng mạnh gấp ba —
+        /// vừa sai spec vừa phá vỡ cân bằng.
+        /// </summary>
+        /// <param name="centers">Các tâm nổ. Chỉ đọc <paramref name="centerCount"/> phần tử đầu.</param>
+        /// <returns>Số mục tiêu KHÁC NHAU đã trúng đòn.</returns>
+        public static int ExplodeMultiPoint(
+            List<Vector3> centers,
+            int centerCount,
+            float radius,
+            float rawDamage,
+            EDamageSource source,
+            GameObject instigator,
+            LayerMask targetMask)
+        {
+            AlreadyHit.Clear();
+
+            for (int c = 0; c < centerCount && c < centers.Count; c++)
+            {
+                int count = Physics.OverlapSphereNonAlloc(
+                    centers[c], radius, Buffer, targetMask, QueryTriggerInteraction.Collide);
+
+                for (int i = 0; i < count; i++)
+                {
+                    var collider = Buffer[i];
+                    if (collider == null)
+                        continue;
+
+                    var damageable = collider.GetComponentInParent<IDamageable>();
+                    if (damageable == null || !damageable.IsAlive)
+                        continue;
+
+                    if (AlreadyHit.Contains(damageable))
+                        continue;
+
+                    AlreadyHit.Add(damageable);
+
+                    var info = new DamageInfo(rawDamage, source, instigator, damageable.Transform.position);
+                    damageable.TakeDamage(in info);
+                }
+            }
+
+            return AlreadyHit.Count;
         }
     }
 }

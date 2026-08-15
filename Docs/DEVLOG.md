@@ -28,9 +28,9 @@
 | 2.2 | `Sát thương gây ra = gốc × (1 + DamageMultiplier)` | — | ✅ |
 | 2.2 | Giáp áp dụng cho **cả đòn chém lẫn độc** | — | ✅ |
 
-> ⚠️ **Hai chỗ cố ý lệch spec, đã được nhà tuyển dụng cho phép tune và người chơi chốt giữ nguyên
+> ⚠️ **Ba chỗ cố ý lệch spec, đã được nhà tuyển dụng cho phép tune và người chơi chốt giữ nguyên
 > ngày 15/08/2026.** Ghi ra đây để không ai hiểu nhầm là làm sai, và **phải nhắc lại trong README
-> nộp bài**.
+> nộp bài**. (Chỗ thứ ba là vùng nổ của Dash, xem mục 3.3 bên dưới.)
 >
 > Lý do: spec cho player 2 unit/s trong khi quái cận chiến chạy 3 unit/s — chênh lệch đó khiến
 > người chơi **không bao giờ thoát khỏi quái bằng cách chạy**, mọi tình huống đều phải dùng Dash,
@@ -54,8 +54,27 @@
 | 3.2 | Bom: nổ sau 2 s, 50 dmg gốc, bán kính 5 unit | — | ✅ |
 | 3.2 | Bom cooldown | 12 s | ✅ |
 | 3.3 | Dash: 3 unit trong 0.5 s theo forward | — | ✅ |
-| 3.3 | Hết lướt nổ 15 dmg gốc, bán kính 3 unit | — | ✅ |
+| 3.3 | Hết lướt nổ 15 dmg gốc, bán kính 3 unit | — | ⚠️ **15 dmg và bán kính 3 giữ nguyên**, nhưng nổ ở **4 điểm dọc đường lướt** thay vì 1 điểm ở cuối. Mỗi con vẫn chỉ ăn **đúng một lần**. Xem ghi chú dưới |
 | 3.3 | Dash cooldown | 6 s | ✅ |
+
+> ⚠️ **Vùng nổ của Dash rải dọc đường lướt thay vì dồn vào điểm cuối.**
+>
+> Sát thương **không đổi**: vẫn 15 gốc, bán kính 3, và **mỗi kẻ địch chỉ ăn đúng một lần** —
+> có danh sách chống trùng trong `AreaDamage.ExplodeMultiPoint` để bảo đảm điều đó, vì bốn vùng
+> nổ đặt cách nhau khoảng 1 unit mà bán kính mỗi vùng là 3 nên chúng chồng lên nhau rất nhiều.
+>
+> Lý do đổi là **hình học của chính kỹ năng này**, không phải để làm nó mạnh hơn. Dash tồn tại
+> để CHẠY KHỎI đám quái, nên tới lúc nổ ở điểm cuối thì mấy con đang bám sau lưng đã ra ngoài tầm.
+> Đo được trong Play mode:
+>
+> | Tình huống | Trước | Sau |
+> |---|---|---|
+> | Quái áp sát 1.3 unit, player lướt 3 unit, quái phía sau kết thúc ở 4.3 unit | dính **2/6** | dính **4/4** |
+> | Con nào ăn quá một lần | — | **0** |
+> | Sát thương mỗi con | 15 | **15** |
+>
+> Đặt `_trailBombCount = 0` trên `Skill_Dash.asset` là quay về **đúng spec gốc** — một vụ nổ duy
+> nhất ở điểm kết thúc — mà không phải sửa một dòng code nào.
 
 ### 4. Kẻ địch
 
