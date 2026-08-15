@@ -59,6 +59,9 @@ namespace Survival.Audio
         [SerializeField, Tooltip("Lên cấp.")]
         private GameSound _levelUp = new GameSound();
 
+        [SerializeField, Tooltip("Nhặt được bình hồi máu.")]
+        private GameSound _pickup = new GameSound();
+
         [Header("Giao diện")]
         [SerializeField, Tooltip("Bấm nút bất kỳ trên màn hình.")]
         private GameSound _uiClick = new GameSound();
@@ -73,6 +76,7 @@ namespace Survival.Audio
         public GameSound PlayerHurt => _playerHurt;
         public GameSound PlayerDeath => _playerDeath;
         public GameSound LevelUp => _levelUp;
+        public GameSound Pickup => _pickup;
         public GameSound UiClick => _uiClick;
     }
 }

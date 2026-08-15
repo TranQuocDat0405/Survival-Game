@@ -35,6 +35,7 @@ namespace Survival.Audio
         public static void PlayPlayerHurt() => Config?.PlayerHurt.Play();
         public static void PlayPlayerDeath() => Config?.PlayerDeath.Play();
         public static void PlayLevelUp() => Config?.LevelUp.Play();
+        public static void PlayPickup() => Config?.Pickup.Play();
         public static void PlayUiClick() => Config?.UiClick.Play();
     }
 }

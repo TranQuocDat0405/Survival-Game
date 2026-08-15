@@ -150,6 +150,7 @@
 | Hạng mục | Trạng thái |
 |---|---|
 | Damage popup số nổi (verify công thức bằng mắt) | ⬜ |
+| **Bình hồi máu rơi trên sân** (10 s · tối đa 3 · hồi 75) | ✅ Sinh trong tầm nhìn camera, chữ thập đỏ phát sáng |
 | Debug/Cheat panel (kill all, +EXP, god mode, skip wave) | ⬜ |
 | Unit test EditMode (công thức, charge, poison, EXP) | ⬜ |
 | **Animation chết cho player và quái** | ⬜ Ngày 3 (art) |
@@ -581,3 +582,50 @@ có của nframework cùng hai nhóm Music/SFX — 11/11 kênh nay đều đi qu
 trong cùng một khung hình nên ngưỡng chống chồng chặn cả hai; và `player đã chết` nên `TryUseSkill`
 trả về false, mà nguyên nhân là **63.9 giây trôi qua giữa hai lệnh MCP** để player đứng yên cho
 quái đánh. Con số vô lý thì phải nghi phép đo trước khi nghi code.
+
+---
+
+### 15/08/2026 — Bình hồi máu rơi trên sân (ngoài spec)
+
+`Docs/README.md` không hề nhắc tới vật phẩm hồi máu. Thêm vào vì trong một ván dài, người chơi
+mất máu dần mà cách duy nhất hồi lại là lên cấp — càng về sau càng chỉ có một chiều đi xuống.
+
+**Chỗ sinh phải NHÌN THẤY ĐƯỢC — ngược hoàn toàn với chỗ sinh quái.** Quái bắt buộc phải sinh
+ngoài khung hình, nếu không người chơi thấy chúng mọc ra từ hư không. Vật phẩm thì rơi ngoài
+khung hình nghĩa là người chơi không biết nó tồn tại, và nó không tạo ra quyết định nào — trong
+khi cả điểm hay của vật phẩm là buộc người chơi cân nhắc "có đáng rời chỗ an toàn để chạy ra
+nhặt không". Hai lớp làm hai việc ngược nhau nên cố tình **không dùng chung** một hàm chọn điểm.
+
+**Nhặt bằng khoảng cách chứ không bằng trigger collider.** Trigger nghe đúng bài hơn nhưng kéo
+theo một chuỗi thứ phải khớp: layer của vật phẩm, ô tương ứng trong bảng va chạm, và Rigidbody
+ở cả hai bên. Sai một mắt xích thì vật phẩm im lặng không nhặt được mà **không có lỗi nào báo ra**.
+Sân chỉ có tối đa ba bình nên so khoảng cách mỗi khung hình là ba phép trừ — rẻ hơn rất nhiều
+so với rủi ro đó.
+
+**Màu sắc — người chơi cảnh báo trước là cỏ xanh sẽ nuốt mất vật phẩm, và cảnh báo đó đúng.**
+Đo màu nền cỏ ra RGB(73, 128, 44), tức hue 99°; màu đối lập chính xác là tím magenta 279°.
+Nhưng map đã có sẵn hoa tím **và** hoa đỏ lấm tấm khắp nơi, nên chọn theo hue thôi không đủ.
+Thứ phân biệt tuyệt đối là **PHÁT SÁNG**: trong cả cảnh không có vật nào phát sáng, nên vật liệu
+emissive nổi lên bất kể quanh đó có hoa màu gì.
+
+Bản đầu vẫn chưa đủ: chụp hình ra thì chữ thập bằng đúng cỡ mấy bông hoa đỏ, liếc nhanh dễ lẫn.
+Đã phóng to 1.6 lần, nâng cao từ 0.55 lên 0.85 để lộ khỏi thảm cỏ, và thêm một **đĩa đỏ dẹt dưới
+chân** làm mốc — nhờ nó vẫn tìm ra được ngay cả khi thân chữ thập bị cỏ che.
+
+Xoay chậm và nhấp nhô là **bắt buộc chứ không phải trang trí**: nền là cỏ có hoa lá lấm tấm, một
+vật đứng yên rất dễ chìm vào đó, còn chuyển động thì mắt bắt được ngay cả khi đang bận nhìn chỗ khác.
+Mỗi bình bốc một pha nhấp nhô ngẫu nhiên, nếu không cả ba nhấp nhô đồng loạt như một.
+
+**Đo được (50 giây không can thiệp):**
+
+| | |
+|---|---|
+| Số bình trên sân | **3 — đúng giới hạn** |
+| Pool | 3 tổng / 3 đang dùng, không rò rỉ |
+| Khoảng cách tới player | 4.2 · 6.3 · 7.8 unit (config 4–9) |
+| Toạ độ màn hình | x 0.42–0.54 · y 0.65–0.79 — cả ba nằm gọn trong khung hình |
+| Hồi máu | **đúng +75** (200 → 275) |
+
+Chỉ sinh khi người chơi **đang thiếu máu** — tắt điều kiện này thì đầu ván, lúc còn đủ máu, sân
+đã có sẵn mấy bình vô dụng nằm chờ. Không cho vật phẩm tự biến mất: giới hạn 3 cái đã đủ chống
+sân bị rác, mà người chơi cũng không mất phần thưởng oan chỉ vì lúc đó đang bị vây không thoát ra kịp.

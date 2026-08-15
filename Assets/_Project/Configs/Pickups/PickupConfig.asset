@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 909b22604bf139b42b2cfc2cf040b4cf, type: 3}
+  m_Name: PickupConfig
+  m_EditorClassIdentifier: 
+  _healthPickupPrefab: {fileID: 8365595212226046452, guid: c74e173b38f8c0b468f1213aa23a1d93, type: 3}
+  _healAmount: 75
+  _spawnInterval: 10
+  _maxAlive: 3
+  _minSpawnRadius: 4
+  _maxSpawnRadius: 9
+  _requireVisible: 1
+  _viewportMargin: 0.15
+  _blockMask:
+    serializedVersion: 2
+    m_Bits: 24576
+  _clearRadius: 0.6
+  _placementAttempts: 24
+  _onlyWhenHurt: 1
+  _pickupRadius: 0.9

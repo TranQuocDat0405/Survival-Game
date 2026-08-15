@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _shoot:
     _sound: {fileID: 11400000, guid: aaaccf7bc0bb4b246b5097bdd026337d, type: 2}
-    _volume: 1
+    _volume: 0.154
     _minInterval: 0.08
   _bombExplode:
     _sound: {fileID: 11400000, guid: f0fece629b261b84b9515155714093de, type: 2}
@@ -34,7 +34,7 @@ MonoBehaviour:
     _minInterval: 0.1
   _enemyHurt:
     _sound: {fileID: 11400000, guid: a675136b38f883142afd06f3e37a6615, type: 2}
-    _volume: 1
+    _volume: 0.23
     _minInterval: 0.06
   _enemyDeath:
     _sound: {fileID: 11400000, guid: d84129f4f45298b4898a3f2e2cfa8a15, type: 2}
@@ -52,6 +52,10 @@ MonoBehaviour:
     _sound: {fileID: 11400000, guid: 57e2ede5f0cd5cb45bbc684981dbef07, type: 2}
     _volume: 1
     _minInterval: 0
+  _pickup:
+    _sound: {fileID: 11400000, guid: 8353596299b2f4f44a8a92c28df815a9, type: 2}
+    _volume: 1
+    _minInterval: 0.1
   _uiClick:
     _sound: {fileID: 11400000, guid: 6eb98c64034d35249bc1ebed913db811, type: 2}
     _volume: 1

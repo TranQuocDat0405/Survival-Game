@@ -65,3 +65,7 @@ MonoBehaviour:
     PrewarmCount: 4
     AutoExpand: 1
     MaxPoolSize: 0
+  - Prefab: {fileID: 8365595212226046452, guid: c74e173b38f8c0b468f1213aa23a1d93, type: 3}
+    PrewarmCount: 3
+    AutoExpand: 1
+    MaxPoolSize: 0
