@@ -60,6 +60,8 @@ namespace Survival.Vfx
 
         private void HandleLeveledUp(int newLevel)
         {
+            Survival.Audio.GameAudioService.PlayLevelUp();
+
             if (_levelUpVfx == null || PoolService.I == null)
                 return;
 

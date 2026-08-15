@@ -94,6 +94,7 @@ namespace Survival.UI
             SetAlpha(_alpha);
 
             CameraShakeService.I?.ShakeOnPlayerHit();
+            Survival.Audio.GameAudioService.PlayPlayerHurt();
         }
 
         private void Update()

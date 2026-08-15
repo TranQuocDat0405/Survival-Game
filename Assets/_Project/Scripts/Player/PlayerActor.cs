@@ -158,6 +158,8 @@ namespace Survival.Player
             // sẽ trôi ngang màn hình mãi mãi trong khi quái đứng im.
             _motor.Stop();
 
+            Audio.GameAudioService.PlayPlayerDeath();
+
             OnDied?.Invoke();
         }
 

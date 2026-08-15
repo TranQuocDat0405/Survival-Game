@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f693f4fc76480ab42bfc2a3659ae4efc, type: 3}
+  m_Name: GameAudio
+  m_EditorClassIdentifier: 
+  _shoot:
+    _sound: {fileID: 11400000, guid: aaaccf7bc0bb4b246b5097bdd026337d, type: 2}
+    _volume: 1
+    _minInterval: 0.08
+  _bombExplode:
+    _sound: {fileID: 11400000, guid: f0fece629b261b84b9515155714093de, type: 2}
+    _volume: 1
+    _minInterval: 0.25
+  _dashExplode:
+    _sound: {fileID: 11400000, guid: 5ea6838078bf3e349814ddf57c5a6c33, type: 2}
+    _volume: 1
+    _minInterval: 0.25
+  _enemyAttack:
+    _sound: {fileID: 11400000, guid: 9562aa8363f406e4db3fef8282b8ec40, type: 2}
+    _volume: 1
+    _minInterval: 0.1
+  _enemyRangedAttack:
+    _sound: {fileID: 11400000, guid: bdc640264782a3649b17d5fd93db7e54, type: 2}
+    _volume: 1
+    _minInterval: 0.1
+  _enemyHurt:
+    _sound: {fileID: 11400000, guid: a675136b38f883142afd06f3e37a6615, type: 2}
+    _volume: 1
+    _minInterval: 0.06
+  _enemyDeath:
+    _sound: {fileID: 11400000, guid: d84129f4f45298b4898a3f2e2cfa8a15, type: 2}
+    _volume: 1
+    _minInterval: 0.08
+  _playerHurt:
+    _sound: {fileID: 11400000, guid: 8ea23bfb40315374cac0ba32f4097e92, type: 2}
+    _volume: 1
+    _minInterval: 0.15
+  _playerDeath:
+    _sound: {fileID: 11400000, guid: 57398b786c33030448649fe440546a90, type: 2}
+    _volume: 1
+    _minInterval: 0
+  _levelUp:
+    _sound: {fileID: 11400000, guid: 57e2ede5f0cd5cb45bbc684981dbef07, type: 2}
+    _volume: 1
+    _minInterval: 0
+  _uiClick:
+    _sound: {fileID: 11400000, guid: 6eb98c64034d35249bc1ebed913db811, type: 2}
+    _volume: 1
+    _minInterval: 0.05

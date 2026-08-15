@@ -75,6 +75,7 @@ namespace Survival.Projectiles
             // Độ rung nằm trong CameraShakeService chứ không ở đây, để mọi mức rung của game
             // đọc được cạnh nhau trên cùng một Inspector thay vì rải khắp các prefab.
             CameraRig.CameraShakeService.I?.ShakeOnBombExplosion();
+            Audio.GameAudioService.PlayBombExplode();
 
             ReturnToPool();
         }

@@ -182,6 +182,10 @@ namespace Survival.Skills
             Vector3 forward = Context.Forward;
             Vector3 origin = Context.SpawnPosition;
 
+            // Một tiếng cho CẢ LOẠT, không phải một tiếng mỗi viên. Ba viên bay ra cùng khoảnh
+            // khắc, phát ba tiếng chồng lên nhau chỉ làm biên độ gấp ba và nghe méo đi.
+            Audio.GameAudioService.PlayShoot();
+
             for (int i = 0; i < angles.Length; i++)
             {
                 // Xoay quanh trục đứng để tạo hình nón. Quay hướng forward đi angles[i] độ.

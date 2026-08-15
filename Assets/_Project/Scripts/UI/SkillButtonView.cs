@@ -203,6 +203,11 @@ namespace Survival.UI
         /// </summary>
         public void OnPointerDown(PointerEventData eventData)
         {
+            // Tiếng bấm phát ngay lúc CHẠM XUỐNG, kể cả với nút phải nhắm rồi mới bắn.
+            // Đây là phản hồi xác nhận "máy đã nhận thao tác của bạn", nên nó phải đến tức thì;
+            // để tới lúc nhả tay mới kêu thì cảm giác điều khiển bị trễ.
+            Survival.Audio.GameAudioService.PlayUiClick();
+
             if (!_useAimDrag)
             {
                 _onPressed?.Invoke();

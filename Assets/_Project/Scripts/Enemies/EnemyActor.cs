@@ -160,13 +160,33 @@ namespace Survival.Enemies
             };
 
             _health.OnDied += HandleDied;
+            _health.OnDamaged += HandleDamaged;
         }
 
         protected override void OnDestroy()
         {
             base.OnDestroy();
             if (_health != null)
+            {
                 _health.OnDied -= HandleDied;
+                _health.OnDamaged -= HandleDamaged;
+            }
+        }
+
+        /// <summary>
+        /// Kêu một tiếng khi quái ăn đòn — đây là phản hồi quan trọng nhất của cả trận đánh,
+        /// vì nó là thứ trả lời câu hỏi "mũi tên vừa rồi có trúng không".
+        ///
+        /// Không kêu khi giáp đỡ hết, để người chơi phân biệt được "đỡ được" với "ăn đủ".
+        /// Không kêu theo từng tick độc: độc trừ máu mỗi giây suốt ba giây, kêu theo tick thì
+        /// một con dính độc là tiếng kêu liên hồi và át hết mọi thứ khác.
+        /// </summary>
+        private void HandleDamaged(Health target, float appliedDamage, in Combat.DamageInfo info)
+        {
+            if (appliedDamage <= 0f || info.Source == Combat.EDamageSource.Poison)
+                return;
+
+            Audio.GameAudioService.PlayEnemyHurt();
         }
 
         /// <summary>
@@ -629,6 +649,14 @@ namespace Survival.Enemies
         public void ExecuteAttack()
         {
             _config.Attack?.Execute(_attackContext);
+
+            // Tiếng ra đòn phát ĐÚNG lúc gây sát thương, không phải lúc bắt đầu lấy đà.
+            // Nhờ vậy nó là tín hiệu trung thực: nghe thấy tiếng nghĩa là đòn đã ra rồi,
+            // né lúc này là muộn. Muốn báo sớm thì đã có động tác vung tay lo việc đó.
+            if (_config.Attack is Attacks.ProjectileAttack)
+                Audio.GameAudioService.PlayEnemyRangedAttack();
+            else
+                Audio.GameAudioService.PlayEnemyAttack();
         }
 
         public void Kill() => _health.Kill();
@@ -648,6 +676,7 @@ namespace Survival.Enemies
             _rigidbody.isKinematic = true;
 
             SpawnDeathVfx();
+            Audio.GameAudioService.PlayEnemyDeath();
 
             EnemyRegistry.I?.NotifyDied(this);
             OnDied?.Invoke(this);

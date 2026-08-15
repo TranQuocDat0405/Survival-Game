@@ -130,9 +130,9 @@
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Camera shake (bắn, dash, nhận damage) | ⬜ |
-| VFX nổ / đạn / hit / lên cấp | ⬜ |
-| Âm thanh SFX | ⬜ |
+| Camera shake | ✅ Cinemachine Impulse. **Cố ý chỉ rung ở bom nổ và ăn đòn**, không rung khi bắn và dash — đánh thường bắn mỗi 0.5 s, rung theo từng phát thì màn hình không lúc nào đứng yên. Cả hai vẫn có sẵn dây nối, bật lại chỉ cần đổi một số |
+| VFX nổ / đạn / hit / lên cấp | ✅ 8 hiệu ứng, tất cả qua pool. Nổ 20 cái liền: pool tự nở 12→20, sau 5 giây cả 20 tự trả về |
+| Âm thanh SFX | ✅ 11 tiếng, gom trong một asset `GameAudio.asset` |
 
 ### 9. Nộp bài
 
@@ -526,3 +526,58 @@ Thứ tự này do người chơi chốt, không phải tôi tự sắp.
 | 4 | Bình hồi máu spawn định kỳ quanh player (10 s, tối đa 3, hồi 75) | Ý thêm, **ngoài spec** |
 | 5 | Cấu hình sẵn Build Windows + Android, viết hướng dẫn | **Không tự build** — người chơi tự bấm. Làm cuối cùng |
 | 6 | Scene HomeMenu · refactor thư mục ThirdParty · README nộp bài · video gameplay | Chỉ làm sau khi mọi yêu cầu bắt buộc đã đủ và đúng |
+
+---
+
+### 15/08/2026 — Âm thanh (nốt phần cuối của bonus mục 8)
+
+**Gom cả 11 tiếng vào MỘT asset `Configs/Audio/GameAudio.asset`**, không rải vào từng config.
+Lý do: âm thanh không thuộc riêng hệ thống nào, và điều quan trọng nhất khi chỉnh âm là **nghe
+chúng cạnh nhau** — tiếng nổ to hay nhỏ chỉ có nghĩa khi so với tiếng bắn. Rải mỗi tiếng vào
+config của hệ thống sinh ra nó thì phải mở sáu bảy file mới cân được, và gần như chắc chắn lệch.
+Cùng lý lẽ đã dùng khi gom mọi mức rung camera vào một nơi.
+
+**`GameSound` — mỗi tiếng mang theo một khoảng nghỉ tối thiểu.** Đây là phần quan trọng nhất.
+Nhiều sự kiện trong game xảy ra thành **chùm** chứ không lẻ tẻ: đánh thường bắn ba viên cùng lúc,
+một quả bom nổ trúng năm con, cú lướt nổ bốn điểm liền nhau. Phát đủ từng tiếng thì chúng chồng
+lên nhau, biên độ cộng dồn gây vỡ tiếng, và tai nghe ra một tiếng "bụp" méo mó chứ không phải năm
+cú đánh. Ngưỡng để riêng từng tiếng vì nhịp tự nhiên khác nhau: bắn 0.08 s cho nhịp mượt, nổ
+0.25 s vì không bao giờ nên chồng.
+
+Đo được: gọi `PlayEnemyHurt` **20 lần trong một khung hình → đúng 1 tiếng kêu**; `PlayBombExplode`
+8 lần → 1 tiếng.
+
+**`GameAudioService` là cửa duy nhất để phát tiếng.** Mọi nơi gọi một dòng tĩnh, không chỗ nào
+trong gameplay giữ tham chiếu tới file âm thanh. Xoá hẳn service đi thì game vẫn chạy đủ luật,
+chỉ là im lặng — cùng nguyên tắc "trang trí không nắm quyền quyết định gì của luật chơi" đã theo
+từ `PlayerAnimatorDriver`.
+
+**Chọn tiếng:**
+
+| Sự kiện | Clip | Ghi chú |
+|---|---|---|
+| Bắn nỏ | `metalClick` (RPG Audio) | Tiếng lẫy nỏ. Kenney không có tiếng cung nào sát hơn |
+| Nổ bom | `lowFrequency_explosion` | Tiếng to nhất game — bom 50 sát thương, bán kính 5 |
+| Nổ dash | `explosionCrunch` | Nhỏ và gọn hơn bom |
+| Quái xa bắn | `slime` (Sci-fi) | Nghe đúng chất nhớt độc |
+| Quái trúng đòn | `impactSoft_medium` | Thứ trả lời câu hỏi "mũi tên vừa rồi có trúng không" |
+| Player ăn đòn | `impactPunch_heavy` | Đi kèm viền đỏ và rung camera |
+
+Tiếng ra đòn của quái phát **đúng lúc gây sát thương**, không phải lúc bắt đầu lấy đà — nhờ vậy
+nó là tín hiệu trung thực: nghe thấy tiếng nghĩa là đòn đã ra, né lúc này là muộn. Việc báo sớm
+đã có động tác vung tay lo.
+
+Không kêu khi giáp đỡ hết (để phân biệt "đỡ được" với "ăn đủ"), và **không kêu theo từng tick
+độc** — độc trừ máu mỗi giây suốt ba giây, kêu theo tick thì một con dính độc là tiếng liên hồi
+át hết mọi thứ.
+
+**Một lỗi bắt được nhờ soi console chứ không nhờ nghe:** `UnassignedReferenceException: the
+variable _audioMixer of SoundManager has not been assigned`. Âm thanh **vẫn kêu bình thường** nên
+nghe thì không phát hiện ra, nhưng console thì đỏ mỗi lần chỉnh âm lượng. Đã gán AudioMixer sẵn
+có của nframework cùng hai nhóm Music/SFX — 11/11 kênh nay đều đi qua mixer.
+
+**Bài học lặp lại nhiều lần trong phiên này:** ba lần liên tiếp tôi tưởng code hỏng, cả ba đều là
+**phép đo của chính tôi sai** — đọc kênh âm thanh khi 10 kênh đã bận hết; gọi hai bài kiểm tra
+trong cùng một khung hình nên ngưỡng chống chồng chặn cả hai; và `player đã chết` nên `TryUseSkill`
+trả về false, mà nguyên nhân là **63.9 giây trôi qua giữa hai lệnh MCP** để player đứng yên cho
+quái đánh. Con số vô lý thì phải nghi phép đo trước khi nghi code.

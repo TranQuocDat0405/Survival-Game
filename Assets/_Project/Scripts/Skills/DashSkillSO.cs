@@ -262,6 +262,10 @@ namespace Survival.Skills
             // thường xuyên để né đòn. Vẫn gọi ở đây để ai muốn bật lại thì chỉ cần đổi một số
             // trên Inspector, không phải sửa code.
             Survival.CameraRig.CameraShakeService.I?.ShakeOnDashExplosion();
+
+            // Một tiếng cho cả bốn điểm nổ. Khoảng nghỉ trong GameSound lo phần chặn,
+            // nhưng gọi một lần ở đây vẫn rõ ràng hơn là gọi bốn lần rồi trông chờ bị chặn.
+            Survival.Audio.GameAudioService.PlayDashExplode();
         }
     }
 }
