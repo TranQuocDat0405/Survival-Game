@@ -12,6 +12,9 @@ namespace Survival.Core
     {
         Playing = 0,
         GameOver = 1,
+
+        /// <summary>Clear xong wave cuối. Ván chơi kết thúc THẮNG.</summary>
+        Victory = 2,
     }
 
     /// <summary>
@@ -44,6 +47,14 @@ namespace Survival.Core
         private void Start()
         {
             BindPlayer();
+
+            _runStartTime = Time.time;
+
+            if (WaveManager.I != null)
+                WaveManager.I.OnAllWavesCleared += HandleAllWavesCleared;
+
+            if (EnemyRegistry.I != null)
+                EnemyRegistry.I.OnEnemyDied += HandleEnemyDied;
         }
 
         // override chứ không phải khai báo mới: SingletonMono.OnDestroy có nhiệm vụ xoá tham chiếu
@@ -53,6 +64,12 @@ namespace Survival.Core
         {
             if (_player != null && _player.Health != null)
                 _player.Health.OnDied -= HandlePlayerDied;
+
+            if (WaveManager.I != null)
+                WaveManager.I.OnAllWavesCleared -= HandleAllWavesCleared;
+
+            if (EnemyRegistry.I != null)
+                EnemyRegistry.I.OnEnemyDied -= HandleEnemyDied;
 
             base.OnDestroy();
         }
@@ -72,7 +89,7 @@ namespace Survival.Core
 
         private void HandlePlayerDied(Combat.Health health)
         {
-            if (State == EGameState.GameOver)
+            if (State != EGameState.Playing)
                 return;
 
             State = EGameState.GameOver;
@@ -82,6 +99,33 @@ namespace Survival.Core
 
             OnGameOver?.Invoke();
         }
+
+        /// <summary>Bắn ra khi clear xong wave cuối. Giao diện nghe để hiện bảng chiến thắng.</summary>
+        public event Action OnVictory;
+
+        /// <summary>Số quái đã hạ trong ván này. Dùng cho bảng tổng kết.</summary>
+        public int Kills { get; private set; }
+
+        /// <summary>Ván chơi đã kéo dài bao lâu, tính bằng giây.</summary>
+        public float ElapsedSeconds => State == EGameState.Playing ? Time.time - _runStartTime : _runEndTime - _runStartTime;
+
+        private float _runStartTime;
+        private float _runEndTime;
+
+        private void HandleAllWavesCleared(int finalWave)
+        {
+            if (State != EGameState.Playing)
+                return;
+
+            State = EGameState.Victory;
+            _runEndTime = Time.time;
+
+            // Không cần dừng WaveManager: nó đã tự dừng ngay khi phát hiện wave cuối đã clear.
+            // Nhưng vẫn thu quái về pool cho chắc, phòng trường hợp còn xác đang chờ biến mất.
+            OnVictory?.Invoke();
+        }
+
+        private void HandleEnemyDied(Enemies.EnemyActor enemy) => Kills++;
 
         /// <summary>
         /// Bắt đầu lại từ đầu. Nút Chơi lại trên màn hình thua gọi hàm này.
@@ -104,6 +148,11 @@ namespace Survival.Core
             _player?.ResetToStart(spawn);
 
             WaveManager.I?.BeginRun();
+
+            // Đặt lại số liệu tổng kết. Quên bước này thì bảng kết thúc của ván sau sẽ cộng dồn
+            // số quái đã giết và thời gian của cả những ván trước.
+            Kills = 0;
+            _runStartTime = Time.time;
 
             State = EGameState.Playing;
             OnRestarted?.Invoke();

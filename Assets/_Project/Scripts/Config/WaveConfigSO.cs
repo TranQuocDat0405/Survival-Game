@@ -29,9 +29,36 @@ namespace Survival.Config
             [Min(0)] public int MaxCount;
         }
 
+        /// <summary>Một con boss xuất hiện ở đúng một wave nhất định.</summary>
+        [Serializable]
+        public struct BossEntry
+        {
+            [Tooltip("Xuất hiện ở wave số mấy. Wave đầu tiên là 1.")]
+            [Min(1)] public int Wave;
+
+            [Tooltip("Prefab boss. Phải có component EnemyActor, giống mọi loại quái khác.")]
+            public EnemyActor BossPrefab;
+        }
+
         [Header("Thành phần mỗi wave")]
         [SerializeField]
         private List<SpawnEntry> _entries = new List<SpawnEntry>();
+
+        [Header("Boss")]
+        [SerializeField, Tooltip(
+            "Lịch boss: con nào ra ở wave nào. Để trống thì không có boss.\n\n" +
+            "Boss KHÔNG phải một cơ chế riêng — nó chỉ là một EnemyActor với config có máu và " +
+            "sát thương cao hơn. Nhờ vậy nó dùng lại nguyên bộ AI, đường tìm đường, thanh máu, " +
+            "hiệu ứng chết và tính EXP đã có; thêm một con boss nữa chỉ là thêm một dòng ở đây.")]
+        private List<BossEntry> _bosses = new List<BossEntry>();
+
+        [Header("Kết thúc màn chơi")]
+        [SerializeField, Min(0), Tooltip(
+            "Clear xong wave này thì THẮNG. Để 0 nghĩa là chơi vô hạn, không bao giờ thắng.\n\n" +
+            "Spec không nói gì về điều kiện thắng — mục 5 chỉ mô tả cách wave nối nhau. Đặt một " +
+            "wave cuối là lựa chọn có chủ đích cho một bài nộp: người chấm chơi hết được một vòng " +
+            "trọn vẹn có mở đầu, cao trào và kết, thay vì phải tự quyết định lúc nào thì dừng.")]
+        private int _finalWave = 5;
 
         [Header("Vị trí spawn")]
         [SerializeField, Min(1f), Tooltip(
@@ -82,6 +109,11 @@ namespace Survival.Config
         private float _spawnClearRadius = 0.6f;
 
         public IReadOnlyList<SpawnEntry> Entries => _entries;
+        public IReadOnlyList<BossEntry> Bosses => _bosses;
+        public int FinalWave => _finalWave;
+
+        /// <summary>Wave này có phải wave cuối không. Trả về false khi cấu hình là chơi vô hạn.</summary>
+        public bool IsFinalWave(int wave) => _finalWave > 0 && wave >= _finalWave;
         public LayerMask SpawnBlockMask => _spawnBlockMask;
         public float SpawnClearRadius => _spawnClearRadius;
         public float MinSpawnRadius => _minSpawnRadius;

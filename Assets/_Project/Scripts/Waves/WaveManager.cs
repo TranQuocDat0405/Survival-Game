@@ -98,9 +98,28 @@ namespace Survival.Waves
 
             OnWaveCleared?.Invoke(CurrentWave);
 
+            // Clear xong wave cuối là THẮNG — dừng hẳn, không xếp lịch wave kế.
+            // Phải dừng ở đây chứ không chỉ báo ra ngoài: nếu vẫn đếm ngược thì wave mới sẽ
+            // sinh ra ngay sau lưng bảng chiến thắng, và người chơi thắng xong vẫn bị đánh.
+            if (_config.IsFinalWave(CurrentWave))
+            {
+                _running = false;
+                _waitingForNextWave = false;
+                OnAllWavesCleared?.Invoke(CurrentWave);
+                return;
+            }
+
             _waitingForNextWave = true;
             _countdown = _config.DelayBetweenWaves;
         }
+
+        /// <summary>
+        /// Bắn ra khi người chơi clear xong wave cuối cùng. Đây là tín hiệu THẮNG MÀN.
+        ///
+        /// WaveManager chỉ báo sự việc chứ không tự dựng giao diện — việc quyết định ván chơi
+        /// kết thúc thế nào là của <c>GameSession</c>, cùng cách nó đang xử lý lúc thua.
+        /// </summary>
+        public event System.Action<int> OnAllWavesCleared;
 
         private void SpawnNextWave()
         {
@@ -127,7 +146,7 @@ namespace Survival.Waves
                     SpawnOne(entry.EnemyPrefab);
             }
 
-            // Phần tăng độ khó (mặc định tắt) rải đều vào các loại quái đã khai báo.
+            // Phần tăng độ khó rải đều vào các loại quái đã khai báo.
             for (int e = 0; e < extra && entries.Count > 0; e++)
             {
                 var entry = entries[e % entries.Count];
@@ -135,7 +154,32 @@ namespace Survival.Waves
                     SpawnOne(entry.EnemyPrefab);
             }
 
+            SpawnBossesForCurrentWave();
+
             OnWaveStarted?.Invoke(CurrentWave);
+        }
+
+        /// <summary>
+        /// Thả những con boss được xếp lịch cho wave đang bắt đầu.
+        ///
+        /// Boss đi qua ĐÚNG đường sinh như mọi con quái khác — cùng pool, cùng cách chọn chỗ
+        /// khuất camera, cùng đăng ký vào EnemyRegistry. Nhờ vậy điều kiện "clear hết wave"
+        /// tự động tính cả boss mà không phải viết thêm một nhánh nào: wave chỉ kết thúc khi
+        /// con cuối cùng chết, và boss thường là con cuối cùng đó.
+        /// </summary>
+        private void SpawnBossesForCurrentWave()
+        {
+            var bosses = _config.Bosses;
+            if (bosses == null)
+                return;
+
+            for (int i = 0; i < bosses.Count; i++)
+            {
+                if (bosses[i].Wave != CurrentWave || bosses[i].BossPrefab == null)
+                    continue;
+
+                SpawnOne(bosses[i].BossPrefab);
+            }
         }
 
         private void SpawnOne(EnemyActor prefab)

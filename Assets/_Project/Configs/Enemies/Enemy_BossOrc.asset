@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5b8dc32b99b59640a48ada04c82835c, type: 3}
+  m_Name: Enemy_BossOrc
+  m_EditorClassIdentifier: 
+  _displayName: Enemy_BossOrc
+  _visualScale: 1
+  _baseStats:
+  - Type: 0
+    Value: 900
+  - Type: 1
+    Value: 2.6
+  - Type: 2
+    Value: 360
+  - Type: 3
+    Value: 0
+  _attackWindup: 0.6
+  _attackRecover: 0.4
+  _idleAfterAttack: 1
+  _trackTargetDuringWindup: 1
+  _windupTrackingFactor: 0.5
+  _windupChaseFactor: 1
+  _windupHoldRangeFactor: 0.7
+  _attack:
+    rid: 4511735220291502081
+  _deathVfx: {fileID: 526622539104969363, guid: 31a48e404610ab74b856fd339c69be56, type: 3}
+  _deathVfxHeight: 0.8
+  _expReward: 150
+  references:
+    version: 2
+    RefIds:
+    - rid: 4511735220291502081
+      type: {class: ConeMeleeAttack, ns: Survival.Enemies.Attacks, asm: Assembly-CSharp}
+      data:
+        _range: 1.9
+        _coneAngle: 50
+        _damage: 45
+        _heightOffset: 0.8
