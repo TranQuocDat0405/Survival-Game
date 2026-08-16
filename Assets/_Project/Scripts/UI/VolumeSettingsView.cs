@@ -29,8 +29,20 @@ namespace Survival.UI
         [SerializeField] private Image _sfxIcon;
 
         [Header("Ảnh biểu tượng")]
-        [SerializeField] private Sprite _onSprite;
-        [SerializeField] private Sprite _offSprite;
+        [SerializeField, Tooltip("Nốt nhạc khi nhạc đang BẬT.")]
+        private Sprite _onSprite;
+
+        [SerializeField, Tooltip("Nốt nhạc khi nhạc đang TẮT.")]
+        private Sprite _offSprite;
+
+        [SerializeField, Tooltip(
+            "Loa khi hiệu ứng đang BẬT.\n\n" +
+            "Để riêng chứ không dùng chung ảnh với nhạc: hai hàng mà cùng một cái nốt nhạc thì " +
+            "người chơi phải đọc chữ mới biết hàng nào là hàng nào.")]
+        private Sprite _sfxOnSprite;
+
+        [SerializeField, Tooltip("Loa khi hiệu ứng đang TẮT.")]
+        private Sprite _sfxOffSprite;
 
         /// <summary>
         /// Cờ chặn vòng lặp vô hạn.
@@ -128,8 +140,13 @@ namespace Survival.UI
             if (_musicIcon != null && _onSprite != null && _offSprite != null)
                 _musicIcon.sprite = music ? _onSprite : _offSprite;
 
-            if (_sfxIcon != null && _onSprite != null && _offSprite != null)
-                _sfxIcon.sprite = sfx ? _onSprite : _offSprite;
+            // Chưa gắn ảnh riêng cho hiệu ứng thì quay về dùng chung ảnh của nhạc,
+            // để cụm này vẫn chạy chứ không hiện ra một ô trống.
+            Sprite sfxOn = _sfxOnSprite != null ? _sfxOnSprite : _onSprite;
+            Sprite sfxOff = _sfxOffSprite != null ? _sfxOffSprite : _offSprite;
+
+            if (_sfxIcon != null && sfxOn != null && sfxOff != null)
+                _sfxIcon.sprite = sfx ? sfxOn : sfxOff;
 
             // Vẫn cho kéo khi đang tắt — kéo thanh lên rồi bật lại là nghe đúng mức vừa đặt.
             // Chỉ làm mờ để báo rằng hiện tại nó không có tác dụng gì.
