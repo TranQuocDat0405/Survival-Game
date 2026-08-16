@@ -41,6 +41,11 @@ namespace Survival.Combat
 
             int hitCount = 0;
 
+            // Chống trùng là BẮT BUỘC, không phải phòng xa: hai con boss có tới hai collider —
+            // một cái nhỏ để đi lại cho lọt giữa rừng cây, một cái to hơn để ăn đòn cho khớp
+            // thân hình. Không lọc thì một quả bom quét trúng cả hai và boss ăn đòn hai lần.
+            AlreadyHit.Clear();
+
             for (int i = 0; i < count; i++)
             {
                 var collider = Buffer[i];
@@ -53,20 +58,25 @@ namespace Survival.Combat
                 if (damageable == null || !damageable.IsAlive)
                     continue;
 
+                if (AlreadyHit.Contains(damageable))
+                    continue;
+
+                AlreadyHit.Add(damageable);
+
                 var info = new DamageInfo(rawDamage, source, instigator, damageable.Transform.position);
                 damageable.TakeDamage(in info);
                 hitCount++;
             }
 
-            // Mỗi nhân vật chỉ có một collider nên không con nào bị tính hai lần.
-            // Nếu sau này nhân vật có nhiều collider (đầu, thân, chân) thì phải thêm
-            // danh sách chống trùng ở đây.
             return hitCount;
         }
 
         /// <summary>
-        /// Danh sách những mục tiêu đã ăn đòn trong CÙNG MỘT vụ nổ nhiều điểm.
-        /// Cấp phát sẵn một lần và dùng lại, vì dash được bấm liên tục suốt trận.
+        /// Danh sách những mục tiêu đã ăn đòn trong CÙNG MỘT vụ nổ.
+        /// Cấp phát sẵn một lần và dùng lại, vì dash và bom được bấm liên tục suốt trận.
+        ///
+        /// Dùng chung được cho cả nổ một điểm lẫn nổ nhiều điểm vì hai hàm đó đều chạy xong
+        /// gọn trong một lời gọi, không có hàm nào gọi lồng vào hàm kia.
         /// </summary>
         private static readonly List<IDamageable> AlreadyHit = new List<IDamageable>(16);
 

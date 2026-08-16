@@ -101,8 +101,19 @@ namespace Survival.Enemies
             "Đủ dài để animation gục xuống chạy xong, đủ ngắn để xác không nằm vướng mắt.")]
         private float _despawnDelay = 1.2f;
 
-        [SerializeField, Tooltip("Collider của quái. Bị tắt ngay khi chết để xác không cản đường và không chặn đạn.")]
+        [SerializeField, Tooltip("Collider chính của quái, dùng để đi lại và va chạm.")]
         private Collider _collider;
+
+        /// <summary>
+        /// TẤT CẢ collider của con quái, gồm cả những cái nằm ở GameObject con.
+        ///
+        /// Vì sao không chỉ dùng <see cref="_collider"/>: hai con boss có thêm một collider
+        /// dạng trigger to hơn để ăn đòn cho khớp thân hình, nằm ở object con. Nếu lúc chết
+        /// chỉ tắt mỗi collider ở gốc thì cái trigger to đó vẫn còn, và cái xác tiếp tục
+        /// hứng trọn mũi tên của người chơi — đạn dừng lại ở nó, không gây sát thương vì
+        /// đã chết, mà cũng không bay tiếp tới con còn sống đứng sau.
+        /// </summary>
+        private Collider[] _allColliders;
 
         public event Action<EnemyActor> OnDied;
 
@@ -144,6 +155,7 @@ namespace Survival.Enemies
             if (_rigidbody == null) _rigidbody = GetComponent<Rigidbody>();
             if (_health == null) _health = GetComponent<Health>();
             if (_collider == null) _collider = GetComponent<Collider>();
+            _allColliders = GetComponentsInChildren<Collider>(includeInactive: true);
 
             _rigidbody.useGravity = false;
             _rigidbody.constraints = BaseConstraints;
@@ -246,8 +258,7 @@ namespace Survival.Enemies
             // khoá cứng hai trục ngang — đứng nguyên tại chỗ sinh cho tới hết ván.
             SetAnchored(false);
 
-            if (_collider != null)
-                _collider.enabled = true;
+            SetCollidersEnabled(true);
 
             BuildStateMachineOnce();
             _stateMachine.IsRunning = true;
@@ -661,6 +672,19 @@ namespace Survival.Enemies
 
         public void Kill() => _health.Kill();
 
+        /// <summary>Bật hoặc tắt mọi collider của con quái cùng một lúc.</summary>
+        private void SetCollidersEnabled(bool enabled)
+        {
+            if (_allColliders == null)
+                return;
+
+            for (int i = 0; i < _allColliders.Length; i++)
+            {
+                if (_allColliders[i] != null)
+                    _allColliders[i].enabled = enabled;
+            }
+        }
+
         private void HandleDied(Health health)
         {
             StopMoving();
@@ -669,8 +693,9 @@ namespace Survival.Enemies
             // Tắt va chạm NGAY LẬP TỨC. Nếu để nguyên, cái xác vẫn chặn đường player
             // và vẫn hứng mũi tên: tia quét của đạn dừng lại ở collider gần nhất,
             // không gây sát thương (vì đã chết) nhưng cũng không bay tiếp tới con còn sống phía sau.
-            if (_collider != null)
-                _collider.enabled = false;
+            //
+            // Phải tắt HẾT chứ không riêng cái ở gốc — xem chú thích của _allColliders.
+            SetCollidersEnabled(false);
 
             // Kinematic để hệ vật lý không đẩy cái xác trượt đi trong lúc chờ biến mất.
             _rigidbody.isKinematic = true;

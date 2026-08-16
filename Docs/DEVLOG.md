@@ -804,3 +804,82 @@ Nhịp đánh giữ nguyên (lấy đà 0.6/0.7, nghỉ sau đòn 1.0 giây) the
 
 Đã kiểm chứng bằng cách sinh boss thật trong Play mode và cho đánh vào người chơi ở đúng cấp độ
 của wave tương ứng, không chỉ đọc file config.
+
+### Vùng trúng đòn của boss — cho khớp với thân nhìn thấy
+
+Trong lúc tính độ dài trận đánh thì phát hiện **vùng trúng đòn của boss vẫn bằng đúng con
+skeleton thường**, dù thân to gấp mấy lần:
+
+| | Thân thật (nửa bề ngang) | Bề ngang trúng đích |
+|---|---|---|
+| Quái thường | 0.58 | 0.47 |
+| Orc | **1.35** | 0.47 |
+| Demon | **1.82** | 0.47 |
+
+Người chơi bắn vào con demon khổng lồ mà phần lớn đạn bay xuyên qua thân. Nguyên tắc thiết kế cơ
+bản là *vùng trúng đòn phải khớp với thứ người chơi nhìn thấy* — lệch cỡ này người chơi sẽ tưởng
+game lỗi. Đây cũng là nguyên nhân thật sự khiến trận boss dài lê thê chứ không phải máu boss cao.
+
+Lý do nó đang nhỏ: collider 0.32 được đặt cố ý để boss không kẹt giữa rừng cây (bán kính đường đi
+navmesh cũng là 0.32). Phóng to collider đó lên là boss kẹt trở lại.
+
+**Cách làm:** thêm một collider **dạng trigger** riêng tên `HitVolume` chỉ để ăn đòn — trigger nên
+không đẩy ai, không chặn ai, không đụng gì tới đường đi. Kiểm tra trước khi làm: cả đạn lẫn vụ nổ
+đều dùng `GetComponentInParent<IDamageable>()` và quét với `QueryTriggerInteraction.Collide`, nên
+trigger nằm ở object con vẫn quy đúng về `Health` ở gốc.
+
+Kích thước lấy theo **thân**, không lấy theo bề ngang tổng: bề ngang tổng bị dang tay ở tư thế gốc
+và bị vũ khí (rìu, đinh ba) làm phồng — lấy nguyên sẽ thành "bắn trúng không khí mà vẫn tính".
+
+| | Bán kính | Cao | Bề ngang trúng đích | Cả 3 viên cùng trúng khi gần hơn |
+|---|---|---|---|---|
+| Orc | 0.90 | 2.57 | 0.47 → **1.05** | 3.9 unit |
+| Demon | 1.20 | 3.49 | 0.47 → **1.35** | 5.0 unit |
+
+Tầm đánh của boss là 1.9 và 2.3, nên trong lúc cận chiến người chơi luôn nằm trong vùng cả ba viên
+cùng trúng. Sát thương thực tế tăng khoảng ba lần mà không phải đổi một con số cân bằng nào.
+
+### Hai lỗi hồi quy do chính thay đổi này gây ra — và cách phát hiện
+
+Thêm collider thứ hai làm hỏng hai chỗ ngầm giả định "mỗi con quái chỉ có một collider":
+
+**1. Vụ nổ tính sát thương hai lần.** Bom quét trúng cả collider đi lại lẫn `HitVolume` nên boss ăn
+100 thay vì 50. Chú thích cũ trong `AreaDamage` đã tiên đoán đúng tình huống này: *"Mỗi nhân vật chỉ
+có một collider nên không con nào bị tính hai lần. Nếu sau này nhân vật có nhiều collider thì phải
+thêm danh sách chống trùng ở đây."* Đã thêm — dùng lại đúng danh sách chống trùng mà bản nổ nhiều
+điểm vẫn dùng.
+
+**2. Xác boss chặn đạn.** `EnemyActor` tắt collider ngay khi chết để cái xác không hứng mũi tên, nhưng
+nó lấy collider bằng `GetComponent<Collider>()` — chỉ thấy cái ở gốc, không thấy `HitVolume` ở object
+con. Hệ quả: xác boss vẫn ăn trọn đạn của người chơi trong suốt 1.2 giây chờ biến mất. Đã đổi sang
+quản toàn bộ collider qua `SetCollidersEnabled`.
+
+### Kiểm chứng
+
+| Phép kiểm | Kết quả |
+|---|---|
+| Bom 50 lên Orc / Demon / quái thường | mất đúng **50** (trước khi sửa: 100) |
+| Dash 3 tâm nổ chồng nhau, 15 sát thương lên Demon | mất đúng **15** |
+| Bắn 3 viên vào Orc ở 3.5 unit | **cả 3 viên trúng** (trước đây chỉ 1) |
+| Collider của xác boss sau khi chết | **2 tắt / 0 còn bật** |
+| Đạn có xuyên qua xác boss không | viên giữa xuyên qua xác ở 3.0 và trúng con sống ở 5.5 |
+| Boss có bị kẹt vì collider mới không | không — vẫn đi từ 3.0 tới 1.22 bình thường |
+
+Console 0 lỗi / 0 cảnh báo.
+
+**Ba lần đo sai liên tiếp trong buổi này, đều cùng một họ** — ghi lại vì nó lặp lại quá nhiều:
+đo được 51 sát thương thay vì 30 (mấy con tôi giết để dọn hiện trường **cũng cho EXP**, player lên
+cấp nên `DamageMultiplier` đã tăng lên 0.7); đo được 0 viên trúng (một **cái cây** rồi sau đó là
+**đám quái bu quanh** nằm chắn đường đạn); đo được 1 viên thay vì 3 (ở 5.5 unit thì hai viên lệch
+15 độ bay ra ngoài thân boss — đúng hình học, kỳ vọng của tôi mới sai). Lần nào cũng vậy: **con số
+vô lý thì nghi cái thước trước khi nghi cái code.**
+
+### Độ dài trận boss sau khi sửa
+
+| | Máu | Sát thương người chơi gây ra | Thời gian hạ boss |
+|---|---|---|---|
+| Orc @ wave 3 | 600 | ~22/giây | **~28 giây** |
+| Demon @ wave 5 | 1200 | ~32/giây | **~38 giây** |
+
+Trước đây là 64 và 115 giây. Nằm gọn trong khoảng 25–40 giây vốn là độ dài hợp lý cho một trận boss
+ở dòng game này.
