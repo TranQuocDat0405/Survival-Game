@@ -883,3 +883,49 @@ vô lý thì nghi cái thước trước khi nghi cái code.**
 
 Trước đây là 64 và 115 giây. Nằm gọn trong khoảng 25–40 giây vốn là độ dài hợp lý cho một trận boss
 ở dòng game này.
+
+---
+
+## Build Settings và README nộp bài
+
+### Build Settings
+
+Phần lớn đã đúng từ trước. Đối chiếu lại toàn bộ và bổ sung ba chỗ:
+
+| | Trước | Sau |
+|---|---|---|
+| Phiên bản | 0.1 | **1.0** |
+| Định dạng Android | (chưa chốt) | **APK**, tắt App Bundle để cài trực tiếp được |
+| Số khung hình mục tiêu | **không đặt** | **60**, kèm tắt đồng bộ dọc |
+
+Giữ nguyên theo quyết định của người chơi: Windows chạy toàn màn hình 1920×1080.
+
+**Số khung hình là chỗ suýt lọt.** Unity không có ô nào trong Project Settings để đặt nó — chỉ đặt
+được bằng code lúc chạy. Không đặt thì Android mặc định khoá **30 khung hình/giây**. Với game bắn và
+né thì 30 khung là ì rõ rệt: cú dash 0.5 giây chỉ còn 15 khung để người chơi kịp đọc. Và vì Editor
+luôn chạy 60+, lỗi này **không bao giờ lộ ra trong lúc phát triển** — chỉ người cầm bản build Android
+mới thấy.
+
+Đặt trong `AppBootstrap` bằng `RuntimeInitializeOnLoadMethod` thay vì gắn MonoBehaviour vào scene:
+không phải nhớ kéo object vào scene, không ai xoá nhầm được, và nó áp cho mọi scene kể cả scene menu
+sau này. Kèm luôn `Screen.sleepTimeout = NeverSleep` vì người chơi hay đứng yên chờ hồi charge, và
+Android tính quãng đó là không hoạt động rồi tắt màn hình.
+
+### README nộp bài
+
+Viết ở gốc repo (`README.md`) chứ không đụng `Docs/README.md` — file đó là **đề bài gốc**, phải giữ
+nguyên. Viết cho hai loại người đọc cùng lúc: người chấm cần đối chiếu spec, và người chỉ muốn chơi
+thử cần biết bấm phím nào.
+
+Có một mục riêng cho **bốn chỗ lệch đề bài**, mỗi chỗ ghi rõ lý do và **cách chỉnh về đúng đề bài chỉ
+bằng một con số trên Inspector**. Ghi rõ đây là quyết định thiết kế chủ động, không nói là đã được ai
+duyệt.
+
+Điểm cần cẩn thận nhất ở mục dash: nói rõ thay đổi là **vùng phủ**, không phải **sức mạnh** — mỗi con
+quái vẫn chỉ ăn đúng 15 sát thương một lần, có danh sách chống trùng bảo đảm.
+
+**Suýt viết sai một chỗ trong README:** tôi ghi game có "số sát thương bay lên khi trúng đòn". Kiểm
+lại thì `DamagePopup` **không hề tồn tại** — nó nằm trong kế hoạch ban đầu nhưng chưa bao giờ được
+làm, và tôi nhớ nhầm kế hoạch thành hiện thực. Đã bỏ khỏi README. Bài học: tài liệu nộp bài cũng phải
+đối chiếu với code y như code phải đối chiếu với spec, vì người chấm sẽ mở project ra tìm đúng thứ
+mình viết.
