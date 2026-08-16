@@ -2628,7 +2628,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1291393289
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2668,7 +2668,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "T\u1ED1t nh\u1EA5t:  Wave 4   \xB7   h\u1EA1 27 qu\xE1i   \xB7   3:12"
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 15e30d35a47891c468ba0e1d40b5f483, type: 2}
   m_sharedMaterial: {fileID: 1507380317}

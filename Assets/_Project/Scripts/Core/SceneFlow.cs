@@ -80,6 +80,17 @@ namespace Survival.Core
             // game chạy tiếp trước khi màn hình tối đi.
             Time.timeScale = 1f;
 
+            // GHI CÀI ĐẶT XUỐNG ĐĨA TRƯỚC KHI RỜI SCENE.
+            //
+            // Bắt buộc, không phải phòng xa. SoundManager là singleton theo TỪNG SCENE, nên sang
+            // scene mới nó được tạo lại từ đầu và nạp lại từ đĩa. Nếu chưa ghi thì thứ được nạp
+            // là bản cũ, và mọi thay đổi âm lượng người chơi vừa chỉnh sẽ âm thầm quay về giá trị
+            // trước đó — không có lỗi nào báo ra, chỉ là âm lượng "tự nhiên nhảy về như cũ".
+            //
+            // Đo thực tế trước khi có dòng này: chỉnh 0.22 ở màn hình chính, vào màn chơi thành 0.157.
+            if (SaveManager.I != null)
+                SaveManager.I.Save();
+
             float startTime = Time.unscaledTime;
 
             var operation = SceneManager.LoadSceneAsync(sceneName);

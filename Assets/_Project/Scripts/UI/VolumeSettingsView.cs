@@ -90,10 +90,24 @@ namespace Survival.UI
             UpdateVisuals();
         }
 
+        /// <summary>
+        /// Đánh dấu cài đặt âm thanh đã thay đổi, để lần lưu tới không bỏ qua nó.
+        ///
+        /// <c>SaveManager</c> chỉ ghi những mục có cờ <c>DataChanged</c>. <c>SoundManager</c> tự nó
+        /// không bật cờ này khi ai đó đổi âm lượng, nên nếu không có hàm dưới đây thì người chơi
+        /// kéo thanh trượt xong, thoát game, mở lại — và mọi thứ về như cũ.
+        /// </summary>
+        private static void MarkSoundSettingsDirty()
+        {
+            if (SoundManager.I != null)
+                SoundManager.I.DataChanged = true;
+        }
+
         private void HandleMusicVolume(float value)
         {
             if (_isApplyingValues || SoundManager.I == null) return;
             SoundManager.I.MusicVolume = value;
+            MarkSoundSettingsDirty();
         }
 
         private void HandleSfxVolume(float value)
@@ -101,6 +115,7 @@ namespace Survival.UI
             if (_isApplyingValues || SoundManager.I == null) return;
 
             SoundManager.I.SFXVolume = value;
+            MarkSoundSettingsDirty();
 
             // Phát một tiếng mẫu để người chơi NGHE THẤY mình vừa chỉnh tới đâu.
             // Không có nó thì kéo thanh hiệu ứng chẳng khác gì kéo một thanh vô hình.
@@ -112,6 +127,7 @@ namespace Survival.UI
             if (_isApplyingValues || SoundManager.I == null) return;
 
             SoundManager.I.MusicStatus = isOn;
+            MarkSoundSettingsDirty();
             UpdateVisuals();
             Audio.GameAudioService.PlayUiClick();
         }
@@ -121,6 +137,7 @@ namespace Survival.UI
             if (_isApplyingValues || SoundManager.I == null) return;
 
             SoundManager.I.SFXStatus = isOn;
+            MarkSoundSettingsDirty();
             UpdateVisuals();
 
             // Chỉ kêu khi VỪA BẬT lên. Bấm tắt mà vẫn kêu thì đúng là phản tác dụng.
