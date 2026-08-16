@@ -107,8 +107,25 @@ namespace Survival.UI
 #endif
             Rect reported = Screen.safeArea;
 
-            // Đây là phần bảo vệ. Kẹp mọi cạnh vào trong phạm vi màn hình,
-            // để một giá trị sai từ hệ điều hành không thể đẩy UI ra ngoài tầm nhìn.
+            // BẢO VỆ TẦNG MỘT — vùng an toàn phải NẰM LỌT trong màn hình.
+            //
+            // Theo định nghĩa, vùng an toàn là một phần của màn hình. Nếu nó tràn ra ngoài
+            // thì con số nhận được đang mô tả một MÀN HÌNH KHÁC, không phải màn hình đang vẽ.
+            // Lúc đó cứu từng cạnh là vô nghĩa: kẹp cạnh phải về đúng mép nhưng vẫn giữ nguyên
+            // lề trái của máy kia, thành ra toàn bộ giao diện bị đẩy lệch sang một bên.
+            //
+            // Gặp thật trong project này: Editor báo x=136, width=2204 (tổng 2340) trong khi
+            // đang vẽ ở 1920. Kẹp từng cạnh vẫn để lại lề trái 136px vô cớ, và trên màn hình
+            // 1920x1080 bình thường thì lề đó không có lý do gì tồn tại.
+            const float Tolerance = 1f;
+            if (reported.xMax > screenWidth + Tolerance || reported.yMax > screenHeight + Tolerance
+                || reported.xMin < -Tolerance || reported.yMin < -Tolerance)
+            {
+                return new Rect(0f, 0f, screenWidth, screenHeight);
+            }
+
+            // BẢO VỆ TẦNG HAI. Kẹp mọi cạnh vào trong phạm vi màn hình, phòng những sai lệch
+            // nhỏ không đủ để kích hoạt tầng một ở trên.
             float xMin = Mathf.Clamp(reported.xMin, 0f, screenWidth);
             float xMax = Mathf.Clamp(reported.xMax, 0f, screenWidth);
             float yMin = Mathf.Clamp(reported.yMin, 0f, screenHeight);
