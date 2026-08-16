@@ -167,6 +167,30 @@ namespace Survival.Pooling
                 instance.ReturnToPool();
         }
 
+        /// <summary>
+        /// Trả object về pool, NHƯNG chỉ khi nó thật sự đang được mượn ra ngoài.
+        ///
+        /// VÌ SAO CẦN HÀM NÀY — trả về pool hai lần là một lỗi có thật, không phải phòng xa:
+        /// Có những nơi giữ tham chiếu tới một object của pool qua NHIỀU khung hình rồi mới trả,
+        /// ví dụ vệt bom của cú lướt (giữ 0.5 giây) hay hào quang độc bám trên người (giữ 3 giây).
+        /// Trong quãng đó, người chơi bấm Chơi lại thì <see cref="DespawnAll"/> đã thu hồi sạch.
+        /// Đến lượt chủ sở hữu gọi trả lần nữa, pool không còn thấy object trong danh sách đang
+        /// hoạt động và in ra "isn't in activeObjects".
+        ///
+        /// Dùng <c>activeSelf</c> làm dấu hiệu là chắc chắn: pool luôn bật object lên khi cho mượn
+        /// và tắt đi khi thu về, nên tắt tức là đã nằm trong pool rồi.
+        ///
+        /// Hàm này là static và không đụng tới singleton, để lúc tắt game — khi các service đã bị
+        /// huỷ — nó vẫn gọi được mà không ném ra lỗi tham chiếu null.
+        /// </summary>
+        public static void ReturnIfActive(PooledObject instance)
+        {
+            if (instance == null || !instance.gameObject.activeSelf)
+                return;
+
+            instance.ReturnToPool();
+        }
+
         /// <summary>Thu hồi tất cả object đang hoạt động. Dùng khi chơi lại từ đầu.</summary>
         public void DespawnAll()
         {

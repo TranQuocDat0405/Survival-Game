@@ -128,8 +128,11 @@ namespace Survival.Combat.StatusEffects
             if (effect == null)
                 return;
 
+            // Hào quang độc bám trên người tới 3 giây, và trong quãng đó người chơi có thể bấm
+            // Chơi lại — ván mới thu sạch object về pool, kể cả hào quang này. Trả thêm lần nữa
+            // sẽ báo lỗi "isn't in activeObjects", nên để hàm dùng chung tự kiểm tra giúp.
             effect.transform.SetParent(null, worldPositionStays: true);
-            effect.ReturnToPool();
+            Pooling.PoolService.ReturnIfActive(effect);
         }
 
         private void Update() => Tick(Time.deltaTime);

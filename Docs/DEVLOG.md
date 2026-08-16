@@ -677,3 +677,77 @@ rồi lần sau lại phải quay lại.
 **Đã kiểm chứng trong Play mode bằng ảnh chụp phóng to**, cả ba thanh, ở hai trạng thái:
 máu đầy 500/500 → hai đầu bo khít nền; máu vơi 275/500 và EXP 37/100 → đầu trái bo, mép phải
 cắt thẳng. Console 0 lỗi / 0 cảnh báo.
+
+---
+
+## Rà soát toàn bộ trước khi nộp
+
+Đối chiếu từng dòng `Docs/README.md` bằng cách **gọi thẳng vào code và tự bơm thời gian**, chạy
+trọn trong một khung hình để `Update` của game không xen vào. Cách này cho kết quả tất định hơn
+là ngồi bấm chơi rồi ước lượng bằng mắt.
+
+**Kết quả: 43 phép kiểm — toàn bộ đạt.**
+
+| Mục spec | Kiểm chứng | Kết quả |
+|---|---|---|
+| 2.2 Công thức nhận sát thương | giáp 0/4/10/30 với đòn 30/30/2/30 | mất đúng 30 / 26 / 0 / 0 |
+| 2.2 Công thức gây sát thương | DmgMul 0 / 0.1 / 0.2 / 0.5 / 1.0 | ×1.0 / 1.1 / 1.2 / 1.5 / 2.0 |
+| 3.1 Charge | bắn 3 phát → hết; phát thứ 4 bị chặn | đúng |
+| 3.1 Hồi charge | đo mốc tăng: 1.21 → 4.21 → 7.21 giây | **đúng 3.00 giây/lần**, không vượt 3 |
+| 3.1 Giãn cách 0.5s | bắn / +0.3s / +0.55s | cho · chặn · cho |
+| 3.2 Bom | fuse 2s, 50 sát thương, bán kính 5, CD 12 | đúng, chặn suốt CD |
+| 3.3 Dash | 3 unit / 0.5s, 15 sát thương, bán kính 3, CD 6 | đúng |
+| 4.2 Độc — số tick | mốc tick 0.00 / 1.01 / 2.01 / 3.01 giây | **đúng 4 tick** |
+| 4.2 Độc — giáp | giáp 0 / 5 / 30 | tổng 120 / 100 / 0 → **giáp CÓ trừ vào độc** |
+| 4.2 Độc — refresh | dính lại ở giây 1.5 | tổng 180 (2 tick cũ + 4 tick mới), **không stack thành 240** |
+| 4.2 Đạn độc | tốc độ 10, tầm tối đa 5 | kẹp đúng mốc rồi thu về pool, không bay lố |
+| 5 Wave | chạy trọn 5 wave | 3+1 · 5+1 · 5+2+Orc · 6+3 · 6+3+Demon |
+| 5 EXP | 3 kill → Cấp 1 dư 90; kill thứ 4 → Cấp 2 dư 20 | **giữ EXP dư** |
+| 5 Lên nhiều cấp | +300 EXP một lần | Cấp 2 → 5, thưởng cộng đủ 3 lần |
+| 5 Thưởng lên cấp | MaxHP +40, HP hiện tại +40, Giáp +2, DmgMul +0.1 | đúng cả bốn |
+| 6 UI | 6/6 mục | đủ, không mục nào chưa gán |
+
+**Hai lần "FAIL" đầu tiên đều là lỗi phép đo của tôi, không phải lỗi game** — ghi lại vì đây là
+bài học lặp lại nhiều lần trong dự án này: *con số vô lý thì nghi cái thước trước khi nghi cái code.*
+
+- Dash báo "hết cooldown mà vẫn không dùng được". Đọc code ra `CanUse => base.CanUse && !_isDashing`.
+  Cả bài test chạy trong một khung hình nên cú lướt chưa kịp kết thúc. Đo lại trong một khung hình
+  sạch thì đạt.
+- Độc báo tổng sát thương bằng 0 ở mọi trường hợp. Hoá ra player đã **chết** trong 325 giây thực
+  trôi qua giữa hai lệnh đo, mà gán thẳng `Current.Value` thì không hồi sinh được — `IsAlive` vẫn
+  false nên `TakeDamage` thoát ngay. Sửa bằng cách `Restart()` rồi đo liền trong cùng khung hình.
+
+### Cách hiểu "bán kính 5 unit" — đo tới THÂN quái, không phải tâm điểm
+
+Quét ranh giới vụ nổ bán kính 5 theo từng 0.1 unit: trúng xa nhất ở **5.3**, hụt gần nhất ở **5.4**.
+Con số này khớp đúng `5.0 + 0.32` với 0.32 là bán kính collider của quái, tức `Physics.OverlapSphere`
+xét **va chạm của thân quái** chứ không xét toạ độ tâm. Giữ nguyên cách này: nó là cách hiểu tự nhiên
+hơn (thân quái chạm vùng nổ thì phải ăn đòn) và quan trọng với boss vốn có thân to.
+
+### Lỗi thật tìm được: trả object về pool hai lần
+
+Console in ra `Something went wrong! Vfx_DashTrailBomb(Clone)_3 isn't in activeObjects`.
+
+**Nguyên nhân:** có những nơi giữ tham chiếu tới object của pool qua nhiều khung hình rồi mới trả.
+Trong quãng đó người chơi bấm Chơi lại thì `DespawnAll()` đã thu sạch về pool; đến lượt chủ sở hữu
+gọi trả lần nữa là pool không còn thấy object trong danh sách đang hoạt động.
+
+Tái hiện được 100%: dùng dash rồi `Restart()` ngay trong lúc cú lướt còn đang chạy.
+
+**Rà quét thì thấy đúng hai chỗ cùng dạng** — và chỗ thứ hai nguy hiểm hơn nhiều:
+
+| Chỗ | Giữ bao lâu | Mức độ gặp |
+|---|---|---|
+| Vệt bom của dash | 0.5 giây | hẹp |
+| **Hào quang độc bám người** | **3 giây** | rộng — người chơi rất hay đang dính độc lúc chết rồi bấm Chơi lại |
+
+Mọi chỗ còn lại gọi `ReturnToPool()` lên chính mình nên an toàn: trả về xong là object bị tắt, không
+còn `Update` hay coroutine nào chạy tiếp để trả lần hai.
+
+**Cách sửa:** thêm `PoolService.ReturnIfActive` dùng chung thay vì vá riêng từng chỗ. Dấu hiệu nhận
+biết là `activeSelf`, chắc chắn vì pool luôn bật object khi cho mượn và tắt khi thu về. Hàm để static
+và không đụng singleton, để lúc tắt game — khi service đã bị huỷ — vẫn gọi được mà không ném null.
+Hàm này cũng che luôn trường hợp pool cạn phải tái sử dụng object đang hoạt động, khi đó hai nơi
+cùng giữ một object và cùng trả về.
+
+Kiểm chứng lại cả hai kịch bản sau khi sửa: **0 lỗi**.

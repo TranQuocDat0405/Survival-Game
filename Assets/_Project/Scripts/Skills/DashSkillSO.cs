@@ -227,6 +227,13 @@ namespace Survival.Skills
                 if (bomb == null)
                     continue;
 
+                // Quả bom đã bị thu về pool từ trước thì bỏ qua hẳn.
+                // Xảy ra khi người chơi bấm Chơi lại đúng lúc đang lướt: ván mới thu sạch object
+                // về pool, nên quả bom này không còn thuộc về cú lướt đang dở nữa. Cho nó nổ tiếp
+                // vừa gây sát thương ở một toạ độ của ván cũ, vừa trả về pool lần thứ hai.
+                if (!bomb.gameObject.activeSelf)
+                    continue;
+
                 // Ghi lại chỗ quả bom đứng TRƯỚC khi trả nó về pool, vì đó cũng là một tâm nổ.
                 // Bán kính NHỎ HƠN vụ nổ chính, để vùng gây sát thương bám sát thứ mắt nhìn thấy.
                 _blastCenters.Add(bomb.transform.position);
@@ -239,7 +246,7 @@ namespace Survival.Skills
                         puff.transform.localScale = Vector3.one * _def.TrailExplosionScale;
                 }
 
-                bomb.ReturnToPool();
+                Pooling.PoolService.ReturnIfActive(bomb);
             }
 
             _trailBombs.Clear();
