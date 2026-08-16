@@ -16,9 +16,9 @@ MonoBehaviour:
   _visualScale: 1
   _baseStats:
   - Type: 0
-    Value: 900
+    Value: 600
   - Type: 1
-    Value: 2.6
+    Value: 3.3
   - Type: 2
     Value: 360
   - Type: 3
@@ -43,5 +43,5 @@ MonoBehaviour:
       data:
         _range: 1.9
         _coneAngle: 50
-        _damage: 45
+        _damage: 100
         _heightOffset: 0.8

@@ -751,3 +751,56 @@ Hàm này cũng che luôn trường hợp pool cạn phải tái sử dụng obj
 cùng giữ một object và cùng trả về.
 
 Kiểm chứng lại cả hai kịch bản sau khi sửa: **0 lỗi**.
+
+---
+
+## Cân bằng lại hai con boss
+
+**Vấn đề người chơi nêu:** boss đánh yếu như quái thường, và chạy vòng vòng là boss không chạm
+tới được.
+
+Đo ra thì tệ hơn cảm nhận — **độ khó đang bị đảo ngược**:
+
+| | Orc (wave 3) | Demon (wave 5) |
+|---|---|---|
+| Người chơi lúc đó | Cấp 4 · giáp 6 · 620 máu | Cấp 10 · giáp 18 · 860 máu |
+| Sát thương thực | 45 − 6 = 39 → **6.3% máu** | 60 − 18 = 42 → **4.9% máu** |
+| Số đòn để hạ người chơi | 16 | **21** |
+| Tốc độ | 2.6 (chậm hơn player 19%) | 2.4 (chậm hơn 25%) |
+
+**Boss cuối yếu hơn boss đầu.** Demon đánh mạnh hơn về số tuyệt đối nhưng giáp người chơi tăng
+nhanh hơn mức đó, nên tính theo phần trăm máu lại nhẹ hơn. Đây là hệ quả trực tiếp của giáp trừ
+thẳng trong spec: mỗi cấp +2 giáp làm mọi con số sát thương cố định mất giá dần.
+
+Và cả hai boss còn **chậm hơn cả quái thường** (3.0). Quái thường chậm hơn người chơi là cố ý —
+để người chơi thoát được. Boss mà cũng vậy thì không bao giờ chạm tới mục tiêu.
+
+### Căn cứ thiết kế
+
+**Tốc độ.** Quy ước ở dòng game top-down này (Archero, Brotato, Soul Knight, Hades): quái thường
+0.85–1.0× tốc độ người chơi; boss không có chiêu lao tới thì 1.05–1.15×. Mốc riêng của game này:
+dash cho 3 unit mỗi 6 giây, tức trung bình **+0.5 u/s** — nên boss nhanh hơn người chơi quá 0.5 u/s
+là không còn đường chạy thoát bằng bất cứ cách nào.
+
+**Sát thương.** Thước đo đúng không phải con số tuyệt đối mà là **phần trăm máu tối đa tại wave đó**.
+Quái thường 3–6%; boss 15–25%, tức hạ người chơi sau 5–7 đòn nếu đứng yên ăn đủ.
+
+Sát thương boss **không nằm trong spec** (boss là phần thêm), nên chỉnh thoải mái. Ngược lại quái
+thường 30 sát thương là spec §4.1 ghi rõ — không đụng tới.
+
+### Con số đã chốt
+
+| | Máu | Tốc độ | Sát thương | Kết quả |
+|---|---|---|---|---|
+| Orc | 900 → **600** | 2.6 → **3.3** | 45 → **100** | 15.2% máu, **7 đòn** là chết |
+| Demon | 2200 → **1200** | 2.4 → **3.45** | 60 → **175** | 18.3% máu, **6 đòn** là chết |
+
+Thứ tự khó đã đúng chiều trở lại: Demon hạ người chơi nhanh hơn Orc.
+
+Giảm máu vì trận đánh đang quá dài — sát thương người chơi gây ra chỉ khoảng 14–19 mỗi giây, nên
+máu cũ ứng với 60–115 giây đục một con. Vừa chậm vừa đau thì mệt chứ không căng.
+
+Nhịp đánh giữ nguyên (lấy đà 0.6/0.7, nghỉ sau đòn 1.0 giây) theo quyết định của người chơi.
+
+Đã kiểm chứng bằng cách sinh boss thật trong Play mode và cho đánh vào người chơi ở đúng cấp độ
+của wave tương ứng, không chỉ đọc file config.
