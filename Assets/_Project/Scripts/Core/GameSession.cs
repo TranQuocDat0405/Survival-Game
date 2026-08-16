@@ -94,10 +94,30 @@ namespace Survival.Core
 
             State = EGameState.GameOver;
 
+            // Chốt đồng hồ. Quên dòng này là bảng tổng kết lúc THUA hiện thời gian ÂM, vì
+            // ElapsedSeconds lúc đó lấy _runEndTime (còn đang bằng 0) trừ đi _runStartTime.
+            // Nhánh thắng có chốt nên hiện đúng, còn nhánh thua thì không — mà người chơi
+            // thua nhiều hơn thắng rất nhiều, nên đây mới là màn hình hay bị nhìn thấy nhất.
+            _runEndTime = Time.time;
+
             // Dừng sinh quái. Nếu không, wave mới vẫn tiếp tục đổ ra sau lưng màn hình thua.
             WaveManager.I?.StopRun();
 
+            SubmitBestRecord();
+
             OnGameOver?.Invoke();
+        }
+
+        /// <summary>
+        /// Báo kết quả ván vừa xong cho bảng thành tích ở màn hình chính.
+        ///
+        /// Gọi cho CẢ thua lẫn thắng: người chơi thua ở wave 4 vẫn là đi xa hơn người thắng
+        /// chưa từng có, và thành tích đó xứng đáng được ghi lại.
+        /// </summary>
+        private void SubmitBestRecord()
+        {
+            int wave = WaveManager.I != null ? WaveManager.I.CurrentWave : 0;
+            Progression.BestRecord.I?.Submit(wave, Kills, ElapsedSeconds);
         }
 
         /// <summary>Bắn ra khi clear xong wave cuối. Giao diện nghe để hiện bảng chiến thắng.</summary>
@@ -122,6 +142,8 @@ namespace Survival.Core
 
             // Không cần dừng WaveManager: nó đã tự dừng ngay khi phát hiện wave cuối đã clear.
             // Nhưng vẫn thu quái về pool cho chắc, phòng trường hợp còn xác đang chờ biến mất.
+            SubmitBestRecord();
+
             OnVictory?.Invoke();
         }
 

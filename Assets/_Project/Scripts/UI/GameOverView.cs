@@ -25,6 +25,11 @@ namespace Survival.UI
 
         [SerializeField] private Button _restartButton;
 
+        [SerializeField, Tooltip(
+            "Nút quay về màn hình chính. Không có nó thì hết ván người chơi chỉ còn đúng một lựa " +
+            "chọn là chơi tiếp — muốn dừng lại phải tắt hẳn ứng dụng.")]
+        private Button _homeButton;
+
         [SerializeField, Tooltip("Dòng tiêu đề lớn: THUA CUỘC hoặc CHIẾN THẮNG.")]
         private TextMeshProUGUI _titleText;
 
@@ -65,6 +70,9 @@ namespace Survival.UI
 
             if (_restartButton != null)
                 _restartButton.onClick.AddListener(HandleRestartPressed);
+
+            if (_homeButton != null)
+                _homeButton.onClick.AddListener(HandleHomePressed);
         }
 
         private void OnDestroy()
@@ -78,6 +86,9 @@ namespace Survival.UI
 
             if (_restartButton != null)
                 _restartButton.onClick.RemoveListener(HandleRestartPressed);
+
+            if (_homeButton != null)
+                _homeButton.onClick.RemoveListener(HandleHomePressed);
         }
 
         private void HandleGameOver()
@@ -157,6 +168,16 @@ namespace Survival.UI
                 _panel.SetActive(false);
         }
 
-        private void HandleRestartPressed() => _session?.Restart();
+        private void HandleRestartPressed()
+        {
+            Audio.GameAudioService.PlayUiClick();
+            _session?.Restart();
+        }
+
+        private void HandleHomePressed()
+        {
+            Audio.GameAudioService.PlayUiClick();
+            Core.SceneFlow.I.GoToHome();
+        }
     }
 }
