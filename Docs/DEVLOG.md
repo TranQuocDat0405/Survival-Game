@@ -629,3 +629,51 @@ Mỗi bình bốc một pha nhấp nhô ngẫu nhiên, nếu không cả ba nh�
 Chỉ sinh khi người chơi **đang thiếu máu** — tắt điều kiện này thì đầu ván, lúc còn đủ máu, sân
 đã có sẵn mấy bình vô dụng nằm chờ. Không cho vật phẩm tự biến mất: giới hạn 3 cái đã đủ chống
 sân bị rác, mà người chơi cũng không mất phần thưởng oan chỉ vì lúc đó đang bị vây không thoát ra kịp.
+
+---
+
+## Thanh máu & thanh EXP — bo tròn phần tô đầy cho khớp nền
+
+**Triệu chứng người chơi nhìn thấy:** ảnh nền của thanh có bo góc ở hai đầu, nhưng phần tô đầy
+lại vuông góc. Lúc máu đầy, bốn góc vuông của phần tô đầy thò hẳn ra ngoài đường bo của nền —
+nhìn không giống một lựa chọn thẩm mỹ mà giống một lỗi hiển thị.
+
+**Thuật ngữ để gọi các thành phần này** (ghi lại vì sẽ cần khi trình bày):
+
+| Thành phần | Tên gọi | Trong project |
+|---|---|---|
+| Ảnh nền tối phía sau | *background* / *track* | `HealthBar_BG`, `ExpBar_BG` — `Sprite_Panel` |
+| Phần màu chạy theo chỉ số | *fill* | `HealthBar_Fill`, `ExpBar_Fill` |
+| Góc bo tròn | *rounded corner* / *corner radius* | bán kính = nửa chiều cao → hình *viên nang* (**capsule** / **pill**) |
+| Cách kéo ảnh mà góc không méo | *9-slice* / *sliced sprite*, viền gọi là *border* | `Sprite_Panel` border 18 |
+
+**Vì sao trước đây cố tình để vuông.** Ảnh nền dùng được 9-slice nên kéo dài bao nhiêu góc vẫn
+tròn đều. Phần tô đầy thì không: nó đặt `Image.Type = Filled` để cắt theo tỉ lệ máu, mà
+**`Filled` không hỗ trợ 9-slice**. Nên không thể vừa cắt theo phần trăm vừa có góc bo không méo
+từ cùng một cơ chế. Bản trước chọn bỏ góc bo.
+
+**Đánh đổi đã chốt lại.** Cái dở lúc máu đầy (luôn nhìn thấy, ngay từ giây đầu ván) nặng hơn cái
+dở lúc máu vơi. Nên đổi sang: **đầy máu thì hai đầu bo khít nền, vơi máu thì mép phải là một
+đường thẳng đứng** — đúng kiểu thanh máu phổ biến nhất trong game.
+
+**Cách làm.** Thêm `WriteCapsuleFill` vào `RingSpriteGenerator`, vẽ chữ nhật bo tròn hai đầu bằng
+hàm khoảng cách có dấu (*signed distance field*) để mép mượt, không răng cưa. Điểm mấu chốt:
+vì `Filled` kéo thẳng ảnh cho vừa ô, **mỗi thanh phải có ảnh sinh đúng tỉ lệ dài/cao của nó**,
+nếu không hình tròn hai đầu bị kéo bẹt thành bầu dục.
+
+| Ảnh sinh ra | Kích thước | Dùng cho | Ô đích |
+|---|---|---|---|
+| `Sprite_FillRound_Health` | 462 × 38 | `HealthBar_Fill` | 462 × 38 |
+| `Sprite_FillRound_Exp` | 464 × 28 | `ExpBar_Fill` | 464 × 28 |
+| `Sprite_FillRound_Enemy` | 324 × 32 | `Fill` của 4 prefab quái | 81 × 8 (cùng tỉ lệ 10.1) |
+
+Ảnh đặt `Uncompressed`: thanh chỉ cao vài chục pixel, nén khối sẽ làm mép bo lởm chởm mà chẳng
+tiết kiệm được bao nhiêu bộ nhớ.
+
+Sửa cả thanh máu world-space trên đầu quái (`Enemy_Melee`, `Enemy_Ranged`, `Enemy_BossOrc`,
+`Enemy_BossDemon`) để đồng bộ — cùng một lỗi hình học thì sửa hết một lượt, đừng để sót một chỗ
+rồi lần sau lại phải quay lại.
+
+**Đã kiểm chứng trong Play mode bằng ảnh chụp phóng to**, cả ba thanh, ở hai trạng thái:
+máu đầy 500/500 → hai đầu bo khít nền; máu vơi 275/500 và EXP 37/100 → đầu trái bo, mép phải
+cắt thẳng. Console 0 lỗi / 0 cảnh báo.

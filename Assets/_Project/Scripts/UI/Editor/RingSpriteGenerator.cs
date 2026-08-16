@@ -38,10 +38,28 @@ namespace Survival.UI.EditorTools
             // Có viền 9-slice nên kéo dài ra bao nhiêu thì góc bo vẫn giữ nguyên hình dạng.
             WriteRoundedRect("Sprite_Panel", size: 64, cornerRadius: 16, border: 18);
 
-            // Hình chữ nhật trắng trơn dùng cho phần TÔ ĐẦY của thanh.
-            // Cố tình KHÔNG bo góc: ảnh đặt type = Filled sẽ bị cắt ngang theo tỉ lệ máu,
-            // nếu ảnh có góc bo thì mép cắt sẽ lộ ra một đầu tròn một đầu vuông, nhìn rất kỳ.
+            // Hình chữ nhật trắng trơn. Hiện KHÔNG thanh nào còn dùng — mọi thanh đã chuyển sang
+            // ảnh bo tròn hai đầu ở dưới. Vẫn sinh ra để dành cho những chỗ cần một mảng màu
+            // đặc vuông vắn, ví dụ nền mờ hay gạch phân cách.
             WriteRoundedRect("Sprite_FillPlain", size: 16, cornerRadius: 0, border: 0);
+
+            // ----- PHẦN TÔ ĐẦY CỦA CÁC THANH, BO TRÒN HAI ĐẦU -----
+            //
+            // Trước đây phần tô đầy dùng ảnh vuông trơn, vì lo rằng ảnh bo góc đặt type = Filled
+            // sẽ bị cắt ngang và lộ ra một đầu tròn một đầu vuông. Nhưng chơi thật thì cái dở
+            // hơn hẳn nằm ở lúc MÁU ĐẦY: bốn góc vuông của phần tô đầy thò hẳn ra khỏi góc bo
+            // của nền, nhìn như một lỗi hiển thị.
+            // Người chơi đã cân nhắc và chọn đánh đổi ngược lại: đầy máu thì khít nền, còn khi
+            // vơi thì mép phải là một đường thẳng đứng — đó cũng là kiểu thanh máu phổ biến nhất.
+            //
+            // VÌ SAO PHẢI SINH RIÊNG MỘT ẢNH CHO TỪNG THANH:
+            // type = Filled KHÔNG hỗ trợ 9-slice, nên ảnh bị kéo thẳng từ kích thước gốc sang
+            // kích thước thật của thanh. Nếu tỉ lệ hai bên lệch nhau thì góc bo tròn biến thành
+            // bầu dục. Sinh mỗi ảnh đúng tỉ lệ của thanh dùng nó thì góc luôn tròn đều.
+            // Bán kính bo luôn bằng NỬA CHIỀU CAO, tức hai đầu là hai nửa hình tròn khít vào nền.
+            WriteCapsuleFill("Sprite_FillRound_Health", width: 462, height: 38);
+            WriteCapsuleFill("Sprite_FillRound_Exp",    width: 464, height: 28);
+            WriteCapsuleFill("Sprite_FillRound_Enemy",  width: 324, height: 32);
 
             AssetDatabase.Refresh();
             Debug.Log($"[RingSpriteGenerator] Đã sinh ảnh vào {OutputFolder}");
@@ -108,6 +126,77 @@ namespace Survival.UI.EditorTools
                 settings.spriteBorder = new Vector4(border, border, border, border);
                 importer.SetTextureSettings(settings);
             }
+
+            importer.SaveAndReimport();
+        }
+
+        /// <summary>
+        /// Sinh ảnh phần TÔ ĐẦY của một thanh: chữ nhật trắng bo tròn hai đầu (hình viên nang).
+        ///
+        /// Bán kính bo luôn bằng nửa chiều cao, nên hai đầu là hai nửa hình tròn hoàn chỉnh —
+        /// khít đúng với góc bo của ảnh nền.
+        ///
+        /// Ảnh phải được sinh theo ĐÚNG tỉ lệ dài/cao của thanh sẽ dùng nó. Lý do: Image đặt
+        /// type = Filled không dùng được 9-slice, Unity kéo thẳng ảnh cho vừa ô. Nếu ảnh vuông
+        /// mà ô lại dài, hình tròn ở hai đầu sẽ bị kéo bẹt thành bầu dục.
+        /// </summary>
+        private static void WriteCapsuleFill(string fileName, int width, int height)
+        {
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            var pixels = new Color32[width * height];
+
+            float halfWidth = width * 0.5f;
+            float halfHeight = height * 0.5f;
+            float radius = halfHeight;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    // Lấy tâm pixel rồi quy về góc phần tư thứ nhất — hình đối xứng cả hai trục
+                    // nên chỉ cần tính một góc là suy ra được toàn bộ.
+                    float px = Mathf.Abs(x + 0.5f - halfWidth);
+                    float py = Mathf.Abs(y + 0.5f - halfHeight);
+
+                    // Khoảng cách tới mép hình, tính từ tâm của đường bo gần nhất.
+                    float qx = px - (halfWidth - radius);
+                    float qy = py - (halfHeight - radius);
+
+                    float outsideX = Mathf.Max(qx, 0f);
+                    float outsideY = Mathf.Max(qy, 0f);
+                    float distance = Mathf.Sqrt(outsideX * outsideX + outsideY * outsideY)
+                                     + Mathf.Min(Mathf.Max(qx, qy), 0f)
+                                     - radius;
+
+                    // Chuyển khoảng cách thành độ mờ, trải đều trong đúng một pixel để mép mượt.
+                    float alpha = Mathf.Clamp01(0.5f - distance);
+
+                    pixels[y * width + x] = new Color32(255, 255, 255, (byte)(alpha * 255f));
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply();
+
+            string path = Path.Combine(OutputFolder, fileName + ".png");
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path);
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null)
+                return;
+
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.filterMode = FilterMode.Bilinear;
+
+            // Không nén: thanh chỉ cao vài chục pixel, nén khối sẽ làm mép bo lởm chởm
+            // mà cũng chẳng tiết kiệm được bao nhiêu bộ nhớ.
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
 
             importer.SaveAndReimport();
         }
