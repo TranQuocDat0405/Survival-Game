@@ -929,3 +929,61 @@ lại thì `DamagePopup` **không hề tồn tại** — nó nằm trong kế ho
 làm, và tôi nhớ nhầm kế hoạch thành hiện thực. Đã bỏ khỏi README. Bài học: tài liệu nộp bài cũng phải
 đối chiếu với code y như code phải đối chiếu với spec, vì người chấm sẽ mở project ra tìm đúng thứ
 mình viết.
+
+---
+
+## Tối ưu hiệu năng — đo trước, sửa sau
+
+Người chơi báo game "giật giật, không mượt". Trước khi sửa bất cứ thứ gì, đo đã.
+
+**Số liệu ban đầu:**
+
+| | |
+|---|---|
+| Tam giác mỗi khung hình | **21.678.154** |
+| Draw call | **13.243** |
+| Renderer đang bật | 6.362 |
+| Tầm đổ bóng | **150 mét** |
+| Số tầng bóng | 4 |
+
+21,6 triệu tam giác cho một game top-down là con số không bình thường. Và **nguyên nhân không nằm
+ở code gameplay một chút nào** — nó nằm hoàn toàn ở cấu hình đổ bóng.
+
+### Ba nguyên nhân
+
+**Tầm đổ bóng 150m trong khi camera chỉ nhìn thấy 18m.** Camera đặt cao 11m, nghiêng 52 độ, nên
+vùng nhìn thấy xa nhất chỉ khoảng 18 mét. Nhưng mọi vật trong bán kính 150 mét đều phải vẽ lại cho
+mỗi tầng bóng — kể cả những cây ở tận rìa bản đồ mà người chơi không bao giờ thấy. Đây là chỗ tốn
+nhất, và cũng là chỗ dễ bỏ sót nhất vì nhìn màn hình không thấy gì bất thường.
+
+**Bốn tầng bóng.** Nhân số lần vẽ lên. Với một game top-down nơi camera luôn cách mặt đất đúng một
+khoảng cố định, bốn tầng là thừa — hai tầng đã đủ mịn.
+
+**4.841 vật nhỏ đều đổ bóng.** Cỏ, hoa, đá vụn cao dưới 1,2m. Bóng của chúng gần như không nhìn ra
+trên nền cỏ, nhưng mỗi vật vẫn tốn đúng một lượt vẽ vào bản đồ bóng.
+
+### Kết quả
+
+| | Trước | Sau | |
+|---|---|---|---|
+| Tam giác | 21.678.154 | **3.587.055** | **−83%** |
+| Draw call | 13.243 | **4.849** | **−63%** |
+| Thời gian mỗi khung (Editor) | 18,4 ms | 17,4 ms | |
+
+Mức cải thiện thời gian trong Editor trông khiêm tốn vì tới ngưỡng này **chính Editor mới là chỗ
+nghẽn**, không phải GPU. Trên bản build — nhất là trên điện thoại, nơi GPU yếu hơn nhiều lần —
+khoảng cách 83% tam giác mới là thứ quyết định.
+
+**Nhân vật và quái luôn giữ nguyên đổ bóng.** Bóng dưới chân không phải trang trí: nó là thứ giúp
+người chơi đọc được vị trí thật trên mặt đất, nhất là khi quái đứng sau một bụi cây.
+
+### Vì sao KHÔNG viết lại code theo pattern khác
+
+Người chơi có hỏi về việc áp dụng thêm OOP hay design pattern để tối ưu. Rà lại thì phần gameplay
+vốn đã: pooling cho mọi thứ sinh lặp; `OverlapSphereNonAlloc` với bộ đệm cấp phát sẵn nên không
+sinh rác cho bộ dọn rác; so khoảng cách bằng bình phương để khỏi khai căn; giao diện cập nhật theo
+sự kiện chứ không đọc lại mỗi khung hình.
+
+Viết lại phần đó theo một pattern khác sẽ không làm game nhanh thêm một khung hình nào, vì nó không
+phải chỗ nghẽn — mà lại đúng là cách chắc chắn nhất để tạo ra lỗi mới ở một hệ thống đang chạy đúng.
+Tối ưu phải đi theo số đo, không đi theo cảm giác.
