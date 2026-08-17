@@ -49,7 +49,13 @@ namespace pingak9
         // Events
         //--------------------------------------
 
+        // Trường này được gán nhưng chưa nơi nào đọc tới — nó thuộc phần chọn ngày giờ mà game
+        // không dùng. Cảnh báo CS0414 chỉ hiện khi build cho Android/iOS, vì asmdef của thư viện
+        // này không biên dịch cho máy tính để bàn. Tắt riêng đúng cảnh báo đó thay vì xoá trường
+        // đi, để không làm hỏng thư viện cho project khác có dùng tới chức năng chọn ngày giờ.
+#pragma warning disable 414
         string formatDate = "yyyy-MM-dd HH:mm:ss";
+#pragma warning restore 414
         /// <summary>
         /// Note avalible in android
         /// </summary>

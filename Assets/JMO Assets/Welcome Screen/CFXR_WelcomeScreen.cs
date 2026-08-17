@@ -49,7 +49,13 @@ namespace CartoonFX
 
             // Background image
             root.style.backgroundImage = new StyleBackground(AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath("fed1b64fd853f994c8d504720a0a6d44")));
+            // Unity đã đánh dấu unityBackgroundScaleMode là lỗi thời, nhưng đây là cửa sổ chào
+            // mừng của bộ Cartoon FX — chỉ hiện trong Editor, không nằm trong game. Đổi sang API
+            // mới có nguy cơ làm vỡ bố cục của một cửa sổ mà mình không sở hữu, nên chỉ tắt cảnh
+            // báo để log build sạch, giữ nguyên hành vi.
+#pragma warning disable 618
             root.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
+#pragma warning restore 618
 
             // Logo image
             var titleImage = root.Q<Image>("img_title");
