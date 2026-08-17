@@ -11,7 +11,13 @@ namespace NFramework.FirebaseService
 {
     public static class FirebaseRemoteConfigService
     {
+        // Sự kiện này chỉ được kích hoạt trong nhánh code bọc trong #if USE_FIREBASE. Project
+        // hiện không bật Firebase, nên trình biên dịch thấy nó "khai báo mà không ai gọi" và
+        // cảnh báo CS0067 ở mỗi lần build. Tắt riêng đúng cảnh báo đó tại đây thay vì xoá sự
+        // kiện đi, vì xoá là làm hỏng luôn phần Firebase cho những project khác dùng framework này.
+#pragma warning disable 67
         public static event Action OnFetchSuccess;
+#pragma warning restore 67
 
         public static bool IsInitialized { get; private set; }
         public static bool IsFetchSuccess { get; private set; }

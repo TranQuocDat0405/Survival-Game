@@ -411,8 +411,18 @@ namespace NFramework
 #if UNITY_EDITOR
             UnityEditor.EditorUtility.DisplayDialog(title, message, ok);
             callback?.Invoke();
-#else
+#elif UNITY_ANDROID || UNITY_IOS
             pingak9.NativeDialog.OpenDialog(title, message, ok, callback);
+#else
+            // Thư viện hộp thoại gốc (pingak9.Mobile-Dialog-Unity) khai báo trong asmdef của nó là
+            // chỉ biên dịch cho Android, iOS và Editor. Trước khi có nhánh này, bản build Windows
+            // hỏng ngay từ khâu biên dịch vì nhánh #else gọi tới một assembly không hề tồn tại
+            // trên nền tảng đó — mà lỗi lại KHÔNG hiện ra trong Editor, vì Editor đi nhánh trên.
+            //
+            // Máy tính để bàn không có hộp thoại hệ thống kiểu điện thoại, nên ở đây chỉ ghi log
+            // rồi gọi callback để luồng phía sau vẫn chạy tiếp bình thường.
+            Debug.LogWarning($"[UIManager] Nền tảng này không có hộp thoại hệ thống. {title}: {message}");
+            callback?.Invoke();
 #endif
         }
 
@@ -423,8 +433,14 @@ namespace NFramework
                 callback?.Invoke(true);
             else
                 callback?.Invoke(false);
+#elif UNITY_ANDROID || UNITY_IOS
+            pingak9.NativeDialog.OpenDialog(title, message, yes, no, () => { callback?.Invoke(true); }, () => { callback?.Invoke(false); });
 #else
-                pingak9.NativeDialog.OpenDialog(title, message, yes, no, () => { callback?.Invoke(true); }, () => { callback?.Invoke(false); });
+            // Xem giải thích ở OpenSystemPopupInfo ngay phía trên.
+            // Trả lời mặc định là "đồng ý", vì nơi gọi luôn coi đây là một xác nhận chứ không
+            // phải một lựa chọn có thể bỏ qua — dừng luồng lại giữa chừng sẽ khó lần ra hơn nhiều.
+            Debug.LogWarning($"[UIManager] Nền tảng này không có hộp thoại hệ thống. {title}: {message}");
+            callback?.Invoke(true);
 #endif
         }
 
