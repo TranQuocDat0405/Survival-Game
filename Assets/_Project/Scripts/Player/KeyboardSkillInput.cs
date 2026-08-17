@@ -50,7 +50,9 @@ namespace Survival.Player
             "Người chấm sẽ bấm Play trên Editor và chơi bằng chuột. Nếu không có cái này, " +
             "họ chỉ bắn được về đúng hướng đang chạy — trong khi quái nhanh hơn player " +
             "và luôn bám sau lưng, gần như không thể bắn trúng.\n\n" +
-            "Trên điện thoại thì không có chuột nên phần này tự vô hiệu.")]
+            "Trên điện thoại phần này bị chặn hẳn bằng Application.isMobilePlatform: Unity ánh xạ " +
+            "chạm thành chuột, nên nếu không chặn thì nhân vật sẽ xoay về phía ngón tay đang giữ " +
+            "joystick chứ không xoay theo hướng di chuyển.")]
         private bool _aimWithMouse = true;
 
         [SerializeField, Tooltip("Mặt phẳng mà tia chuột chiếu xuống, tính theo độ cao. Nên đặt ngang tầm ngực nhân vật.")]
@@ -101,6 +103,22 @@ namespace Survival.Player
             if (!_aimWithMouse || _motor == null)
                 return;
 
+            // TUYỆT ĐỐI KHÔNG chạy nhánh này trên điện thoại.
+            //
+            // Unity ÁNH XẠ CHẠM THÀNH CHUỘT: trên Android, <c>Input.mousePosition</c> trả về vị trí
+            // ngón tay chạm gần nhất chứ không phải một con trỏ chuột thật. Hệ quả trên máy thật:
+            //   - Người chơi giữ joystick ở góc dưới trái, nên "chuột" luôn nằm ở góc dưới trái,
+            //     và nhân vật xoay về phía đó — kéo joystick đi hướng nào cũng vẫn quay sang trái.
+            //   - Chạm một nút kỹ năng bên phải là "chuột" nhảy sang đó, nhân vật đột ngột xoay theo.
+            //
+            // Lỗi này KHÔNG BAO GIỜ lộ ra trong Editor vì ở đó có chuột thật. Chỉ người cầm bản
+            // build trên điện thoại mới thấy.
+            //
+            // Trên điện thoại, việc xoay người do joystick lo (xoay theo hướng chạy) và do thao tác
+            // kéo trên nút bắn lo (khi cần ngắm riêng một hướng) — không cần tới nhánh này.
+            if (Application.isMobilePlatform)
+                return;
+
             if (_camera == null)
             {
                 _camera = Camera.main;
@@ -130,6 +148,21 @@ namespace Survival.Player
         private void Update()
         {
             if (_player == null)
+                return;
+
+            // TẮT TOÀN BỘ trên điện thoại. Ở đó mọi thao tác đã có joystick và các nút trên màn
+            // hình lo, và Unity ánh xạ chạm thành cả chuột lẫn phím chuột nên lớp này gây ra
+            // hai lỗi cùng lúc nếu để chạy:
+            //
+            //   1. Xoay sai hướng. Nhả tay ra rồi thì không còn touch nào, nên hàm chặn
+            //      IsPointerOverUI bên dưới trả về false — nhưng Input.mousePosition vẫn GIỮ
+            //      NGUYÊN vị trí chạm cuối cùng. Nhân vật xoay mãi về phía ngón tay vừa rời đi,
+            //      thường là góc dưới trái nơi đặt joystick.
+            //   2. Tự bắn. Phím của kỹ năng đầu tiên là KeyCode.Mouse0, mà Unity coi mỗi cú chạm
+            //      là một lần nhấn chuột trái. Chạm vào chỗ trống trên màn hình là bắn một phát.
+            //
+            // Cả hai đều KHÔNG lộ ra trong Editor vì ở đó chuột và cảm ứng là hai thứ tách bạch.
+            if (Application.isMobilePlatform)
                 return;
 
             // Cập nhật trạng thái "đã nhả ra chưa" TRƯỚC mọi lần thoát sớm bên dưới.
