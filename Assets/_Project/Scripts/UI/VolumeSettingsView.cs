@@ -7,12 +7,13 @@ namespace Survival.UI
     /// <summary>
     /// Cụm chỉnh âm lượng: hai thanh trượt và hai công tắc bật/tắt.
     ///
-    /// Đây là một CỤM DÙNG CHUNG, không phải một bảng riêng: nó được nhúng vào màn hình chính
-    /// và nhúng vào bảng tạm dừng trong lúc chơi. Nhờ vậy hai nơi không thể lệch nhau, và sửa
-    /// bố cục một lần là cả hai chỗ đổi theo.
+    /// Đây là một CỤM DÙNG CHUNG, không phải một bảng riêng: nó nằm bên trong
+    /// <see cref="SettingsPopup"/>, và popup đó được mở từ cả màn hình chính lẫn bảng tạm dừng.
+    /// Trước đây cụm này bị dựng hai lần ở hai nơi và phải tự giống nhau bằng kỷ luật của người
+    /// dựng; giờ chỉ còn đúng một bản nên hai chỗ không thể lệch nhau được nữa.
     ///
-    /// Lớp này KHÔNG tự lưu gì cả. Nó chỉ ghi vào <c>SoundManager</c>, còn phần lưu xuống đĩa
-    /// do <c>SaveManager</c> lo — xem <see cref="Core.SaveBootstrap"/>.
+    /// Lớp này KHÔNG tự lưu gì cả. Nó chỉ ghi vào <c>SoundManager</c>, còn phần ghi xuống đĩa
+    /// do <c>SaveManager</c> lo — xem <c>GameManager.RegisterAndLoadSave</c>.
     /// </summary>
     public class VolumeSettingsView : MonoBehaviour
     {

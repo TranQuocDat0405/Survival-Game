@@ -141,11 +141,7 @@ namespace Survival.Manager
 
         private IEnumerator CRBoot()
         {
-            if (_config != null)
-            {
-                QualitySettings.vSyncCount = 0;   // còn bật thì targetFrameRate bị bỏ qua hoàn toàn
-                Application.targetFrameRate = _config.TargetFrameRate;
-            }
+            ApplyApplicationSettings();
 
             var loading = UIManager.I.Open<LoadingPopup>(Define.UIName.LOADING_POPUP);
             loading.SetLabel("ĐANG TẢI...");
@@ -163,6 +159,28 @@ namespace Survival.Manager
 
             yield return loading.FadeOut();
             UIManager.I.Close(loading);
+        }
+
+        /// <summary>
+        /// Vài thiết lập cấp ứng dụng, đặt một lần lúc khởi động.
+        ///
+        /// SỐ KHUNG HÌNH KHÔNG CÓ Ô NÀO TRONG PROJECT SETTINGS để điền — nó chỉ đặt được bằng
+        /// code lúc chạy. Mà nếu không đặt, Unity trên Android mặc định khoá 30 khung hình/giây.
+        /// Với game bắn và né như thế này thì 30 khung hình là ì rõ rệt: cảm giác điều khiển nặng,
+        /// và cú dash 0.5 giây chỉ còn 15 khung để người chơi đọc. Trong Editor lại luôn chạy 60+
+        /// nên lỗi này KHÔNG BAO GIỜ lộ ra lúc phát triển — chỉ người cầm bản build Android mới thấy.
+        /// </summary>
+        private void ApplyApplicationSettings()
+        {
+            // Phải tắt đồng bộ dọc TRƯỚC. Còn bật thì nó khoá nhịp theo tần số quét của màn hình
+            // và targetFrameRate bị bỏ qua hoàn toàn.
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = _config != null ? _config.TargetFrameRate : 60;
+
+            // Không cho màn hình tự tắt giữa lúc đang chơi. Người chơi có thể đứng yên vài giây
+            // để chờ hồi charge hoặc chờ wave sau, và Android tính quãng đó là "không hoạt động"
+            // vì không có thao tác chạm nào.
+            Screen.sleepTimeout = SleepTimeout.NeverSleep;
         }
 
         /// <summary>
