@@ -142,7 +142,7 @@
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Repo GitHub chứa project Unity | ⬜ Repo đã có, **còn phải push đợt refactor 18/08 lên** |
+| Repo GitHub chứa project Unity | ✅ Đã push đầy đủ, gồm cả đợt refactor kiến trúc 18/08 |
 | README nộp bài (mở scene, điều khiển, đã/chưa làm, Unity version) | ✅ `README.md` ở gốc repo |
 | Video gameplay | ✅ Link Google Drive trong README |
 | Build Windows | ✅ Link Google Drive trong README |
