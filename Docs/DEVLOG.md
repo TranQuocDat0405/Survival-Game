@@ -987,3 +987,128 @@ sự kiện chứ không đọc lại mỗi khung hình.
 Viết lại phần đó theo một pattern khác sẽ không làm game nhanh thêm một khung hình nào, vì nó không
 phải chỗ nghẽn — mà lại đúng là cách chắc chắn nhất để tạo ra lỗi mới ở một hệ thống đang chạy đúng.
 Tối ưu phải đi theo số đo, không đi theo cảm giác.
+
+---
+
+## 18/08/2026 — Refactor kiến trúc: một máy trạng thái, một scene không bao giờ unload
+
+Game đã đủ tính năng nhưng **luồng của nó nằm rải ở bốn nơi**. Muốn trả lời câu "bấm Play xong thì
+chuyện gì xảy ra theo thứ tự nào" phải mở sáu file: `SceneFlow` biết cách đổi scene, `GameSession`
+biết ván kết thúc, mỗi màn hình tự quyết định trong `Start()` của nó, và tên scene thì gõ tay dưới
+dạng chuỗi.
+
+Bốn vấn đề cụ thể, đo được chứ không phải cảm giác:
+
+| Vấn đề | Biểu hiện thật |
+|---|---|
+| Không có FSM cấp ứng dụng | Luồng rải ở 4 file, không log được đường đi |
+| Không có `UIManager` | `VolumeSettingsView` bị dựng **hai lần** — sửa bố cục phải sửa 2 nơi |
+| Tên scene là chuỗi gõ tay | Gõ sai một ký tự thì biên dịch vẫn sạch, chỉ nổ lúc chuyển màn |
+| 6 manager nhân đôi ở 2 scene | Phải vá bằng `SaveManager.Save()` giữa lúc chuyển cảnh (commit `a6822dc`) |
+
+Cái thứ tư đáng nói nhất, vì nó cho thấy triệu chứng và bệnh khác nhau thế nào. Trước đây chỉnh âm
+lượng 0.22 ở màn hình chính, vào màn chơi đo lại còn **0.157** — vì `SoundManager` là singleton theo
+từng scene nên sang scene mới nó nạp lại bản cũ trên đĩa. Bản vá lúc đó là ghi đĩa ngay trước khi
+rời scene. Vá đúng triệu chứng, nhưng bệnh là **manager không nên chết theo scene**. Sau refactor,
+`Main` không bao giờ unload nên không còn gì để vá.
+
+### Kiến trúc đích
+
+```
+Main.unity   ← build index 0, nạp lúc mở app, KHÔNG BAO GIỜ unload
+  GameManager · UIManager · SaveManager · SoundManager · GameAudioService
+  UserData · EventSystem · Main Camera · HomeBackdrop
+Game.unity   ← nạp ADDITIVE khi vào trận, unload khi về Home
+```
+
+Toàn bộ luồng giờ đọc được trong đúng một hàm `HandleGameStateChanged`, và console in ra đường đi
+thật lúc chạy: `GameState: LOADING → HOME → INGAME → HOME → INGAME`.
+
+Sáu màn hình thành sáu prefab `BaseUIView` trong `Resources/UI/`, nạp theo yêu cầu. Cụm chỉnh âm
+lượng nhân đôi biến mất: bảng tạm dừng giờ có nút **Cài đặt** mở đúng cái `SettingsPopup` mà màn
+hình chính mở, chồng lên nó, game vẫn đứng yên phía sau.
+
+### Bốn chỗ cố tình lệch template
+
+- **`PoolService` ở lại `Game.unity`.** Pool chứa `EnemyActor` có `NavMeshAgent`, mà dữ liệu NavMesh
+  là dữ liệu của scene. Để pool sống ở `Main` thì agent đang ngủ trong pool vắt qua ranh giới unload
+  và khi bật lại có nguy cơ `"SetDestination" can only be called on an active agent`. Nguyên tắc:
+  pool phải cùng vòng đời với dữ liệu mà object trong pool phụ thuộc vào.
+- **Chơi lại reset tại chỗ, không nạp lại scene.** `Game.unity` nặng 23.8 MB; reset tại chỗ là tức
+  thì, còn nạp lại là khựng vài giây mà người chơi không được lợi gì.
+- **Không dùng `Define.SoundName`.** Template gốc phát tiếng bằng chuỗi đường dẫn. Project này đã có
+  `GameAudioSO` tham chiếu thẳng tới asset — gõ sai là lỗi biên dịch chứ không phải lỗi lúc chạy.
+- **Không sửa file trong `ThirdParty`.** Xem mục phím Back bên dưới.
+
+### Ba cái bẫy chỉ lộ ra khi đọc code đang chạy
+
+**`Camera.main` — cái bẫy nguy hiểm nhất.** Bốn hệ thống phụ thuộc vào nó: ngắm bằng chuột
+(`KeyboardSkillInput`), chọn chỗ sinh quái **ngoài** khung hình (`WaveManager`), chọn chỗ rơi bình
+máu **trong** khung hình (`HealthPickupSpawner`), và xoay thanh máu quái về phía camera
+(`WorldHealthBar`). `Camera.main` trả về camera đầu tiên **đang bật có tag `MainCamera`**, và khi hai
+scene cùng nạp thì thứ tự giữa chúng **không xác định**. Nếu camera trong `Main` cũng mang tag đó thì
+lỗi sẽ chập chờn — loại tệ nhất để gặp. Cả hai camera trong `Main` vì vậy để `Untagged`, nhường lại
+`Game.unity` là scene duy nhất có `MainCamera`.
+
+**Ánh sáng và sương mù không đi theo object.** Diorama ở màn hình chính trông đúng là nhờ
+`RenderSettings` của scene cũ: `fog` bật, chế độ Linear, `fogStart = 18`, `fogEnd = 55`, ambient kiểu
+Trilight. Scene mới tạo ra không thừa hưởng gì cả — mà mặc định Unity là 0/300, lệch rất xa. Phải
+chép sang bằng code chứ không gõ tay. Cùng lý do đó, `Directional Light` phải nằm **trong** cụm
+`HomeBackdrop`: đèn không thuộc scene nào cả, để nó ở ngoài là lúc vào trận sân đấu có hai mặt trời.
+
+**`Start()` của view chỉ chạy MỘT lần.** `UIManager` không huỷ view khi đóng — nó tắt đi rồi cất vào
+bộ nhớ đệm. Nên `Start()` chạy đúng một lần trong cả vòng đời ứng dụng, trong khi player thì chết
+theo scene trận đấu. `PlayerStatusView` cache `_health` trong `Start()` sẽ trỏ vào một `Health` đã bị
+huỷ **từ trận thứ hai trở đi**, và thanh máu đứng im cả trận mà không một dòng lỗi nào báo ra.
+`SkillBarView` còn tệ hơn: nó *sinh* nút lúc chạy, nên mỗi lần vào trận lại đắp thêm một bộ nút mới.
+
+Lời giải đã có sẵn trong chính project: `HurtFlashView` từ trước đã dùng `OnEnable`/`OnDisable` với
+`TryBind`/`Unbind`. Áp đúng khuôn đó cho hai view còn lại. Kiểm chứng bằng năm vòng Home ⇄ trận: cụm
+skill vẫn đúng **3 nút** chứ không phải 15, và thanh máu vẫn trỏ vào player đang sống.
+
+### Phím Back: sửa ở tầng game, không sửa thư viện
+
+`UIManager.Update` của nframework có sẵn đoạn xử lý phím quay lại, nhưng nó nằm sau điều kiện
+`CanInteract`, mà thuộc tính đó lại được định nghĩa là `!_canvasGroup.blocksRaycasts` — tức chỉ đúng
+khi giao diện đang bị **khoá**. Vì `blocksRaycasts` mặc định là `true`, nhánh đó **không bao giờ
+chạy**. Đây là lỗi trong thư viện.
+
+Chọn không sửa file bên thứ ba: một dòng sửa trong `ThirdParty` là một dòng sẽ biến mất lặng lẽ ở
+lần cập nhật thư viện sau. Thay vào đó `GameManager.Update` là nơi **duy nhất** đọc phím, rồi giao
+cho màn hình trên cùng qua đúng hợp đồng có sẵn của framework là `BaseUIView.HandleOnKeyBack()`.
+Mỗi màn hình tự quyết định phím đó nghĩa là gì, và không màn hình nào phải tự đọc `Input`:
+
+| Màn hình | Esc / nút Back |
+|---|---|
+| `Popup` (nền chung) | Đóng chính nó |
+| `PausePopup` | Tiếp tục chơi |
+| `GamePlayMenu` | Mở bảng tạm dừng |
+| `ResultPopup` | **Không làm gì** — hết ván bắt buộc phải chọn một lựa chọn |
+| `LoadingPopup` | Không làm gì |
+
+### Cách giữ cho refactor không làm hỏng gameplay
+
+Quy tắc đặt ra từ đầu: **không đổi một con số cân bằng nào.** Cách kiểm chứng không phải chơi thử rồi
+so bằng mắt, mà là `git status Assets/_Project/Configs/` phải sạch sau mỗi phase. Suốt cả đợt, thư
+mục đó chỉ nhận đúng **hai dòng thêm** — hai tham chiếu nhạc nền mà chính kế hoạch yêu cầu.
+
+Với script, quy tắc là **sửa nội dung file cũ tại chỗ**, và khi đổi tên thì `git mv` cả `.cs` lẫn
+`.cs.meta`. Unity gắn component theo GUID nằm trong file `.meta`, nên tạo file mới rồi xoá file cũ sẽ
+biến mọi component đã gắn thành `Missing (Mono Script)` và **mất sạch reference đã kéo** — mà thiếu
+một cái thì nút đó chết im lặng, không báo lỗi. Làm đúng cách thì `PausePopup` giữ nguyên cả bốn nút,
+`ResultPopup` giữ nguyên chữ, màu và hiệu ứng pháo hoa; chỉ hai field mới của lớp `Popup` là phải
+điền tay.
+
+Với `Game.unity` (549.438 dòng), kiểm chứng bằng `git diff --stat`: thay đổi đúng **5.069 dòng
+(0,9%)** — nhóm `--- Decor ---` 23 MB không bị đụng một dòng nào.
+
+### Một lỗi tự tạo ra rồi tự bắt được
+
+Lớp `LoadingPopup` khai báo `[SerializeField] private CanvasGroup _canvasGroup`, mà lớp cha
+`BaseUIView` cũng đã có một field đúng tên đó. Unity không cho phép trùng tên field giữa lớp con và
+lớp cha — nó báo *"The same field name is serialized multiple times"* và **bỏ qua cả component**.
+Xoá field ở lớp con và dùng property `CanvasGroup` kế thừa là xong: property đó tự tìm component trên
+chính object đó, tức đúng cái mà ô kéo thả cũ đang trỏ tới.
+
+Bài học lặp lại: lỗi này không lộ ra ở bước nào ngoài **đọc console ngay sau mỗi lần sửa script**.
+Dồn năm file rồi mới kiểm tra thì lúc đó phải đi dò ngược.

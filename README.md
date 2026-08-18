@@ -12,7 +12,7 @@ qua **5 đợt** — trong đó đợt 3 và đợt 5 có boss.
 | **Unity** | 2022.3.62f3 (Built-in Render Pipeline, Linear color space) |
 | **Nền tảng** | Windows (Mono) và Android (IL2CPP, ARM64, minSdk 24) |
 | **Hướng màn hình** | Ngang (Landscape) — cả hai chiều |
-| **Scene chính** | `Assets/_Project/Scenes/Game.unity` — bấm Play là chơi được ngay |
+| **Scene chính** | `Assets/_Project/Scenes/Main.unity` — nhưng **bấm Play ở scene nào cũng được**, project tự khởi động từ `Main` |
 
 ---
 
@@ -39,11 +39,16 @@ qua **5 đợt** — trong đó đợt 3 và đợt 5 có boss.
 ## Chơi thử trong 30 giây
 
 1. Mở project bằng **Unity 2022.3.62f3** (bản khác có thể vẫn chạy nhưng chưa được kiểm chứng).
-2. Mở scene `Assets/_Project/Scenes/Game.unity`.
-3. Bấm **Play**.
+2. Mở scene `Assets/_Project/Scenes/Main.unity`.
+3. Bấm **Play**, rồi bấm **CHƠI**.
 
-Không cần bấm nút bắt đầu, không cần qua menu — vào là chơi luôn. Đợt quái đầu tiên xuất hiện sau
-2 giây.
+Đợt quái đầu tiên xuất hiện 2 giây sau khi vào trận.
+
+> **Mở nhầm scene cũng không sao.** Một script chỉ chạy trong Editor
+> ([`PlayModeStartScene.cs`](Assets/_Project/Scripts/Editor/PlayModeStartScene.cs)) đặt `Main` làm
+> scene khởi động cho mọi lần bấm Play. Lý do: sau khi tách kiến trúc, mọi manager sống suốt vòng
+> đời ứng dụng đều nằm trong `Main`, nên mở thẳng `Game.unity` rồi bấm Play sẽ ra một game trông như
+> bị hỏng — trong khi thực ra chỉ là vào sai cửa. Tắt được qua menu `Survival > Luôn Play từ scene Main`.
 
 > Nếu chỉ muốn xem chứ không muốn cài Unity, xem mục [Video và bản build](#video-và-bản-build).
 
@@ -351,10 +356,25 @@ tắt thì chơi được ngay như game PC. Trên điện thoại phần này t
 
 ## Kiến trúc code
 
+Code chia theo **ba tầng vòng đời**, và đây là thứ đáng nhìn trước tiên:
+
+| Tầng | Ai điều phối | Sống ở đâu |
+|---|---|---|
+| **Ứng dụng** | `GameManager` — máy trạng thái `LOADING → HOME → INGAME` | `Main.unity`, không bao giờ unload |
+| **Trận đấu** | `GameplayManager` — đang chơi / thua / thắng, và dọn dẹp để chơi lại | `Game.unity`, nạp additive khi vào trận |
+| **Giao diện** | `UIManager` của nframework — mỗi màn hình là một prefab `BaseUIView` | `Resources/UI/`, nạp theo yêu cầu |
+
+Muốn biết "bấm Play xong thì chuyện gì xảy ra theo thứ tự nào" thì đọc đúng một hàm:
+`GameManager.HandleGameStateChanged`. Console cũng in ra đường đi thật lúc chạy —
+`GameState: LOADING → HOME → INGAME`.
+
 ```
 Assets/_Project/Scripts/
-  Core/          GameSession (vòng đời ván chơi), AppBootstrap, NavMeshProvider
-  Config/        Các ScriptableObject: player, quái, đợt quái, tiến trình, pool, vật phẩm
+  Manager/       GameManager (FSM ứng dụng), GameplayManager (vòng đời ván chơi)
+  Data/          UserData — thành tích tốt nhất, lưu xuống đĩa
+  Utils/         Define — nơi duy nhất chứa tên scene và tên prefab UI
+  Config/        Các ScriptableObject: player, quái, đợt quái, tiến trình, pool, vật phẩm, flow
+  Core/          NavMeshProvider
   Stats/         EStatType, StatSet, StatModifier — chỉ số theo kiểu bảng tra
   Combat/        CombatMath, DamageInfo, Health, AreaDamage, StatusEffects/
   Player/        PlayerActor, PlayerMotor, PlayerInputRouter, KeyboardSkillInput
@@ -365,11 +385,21 @@ Assets/_Project/Scripts/
   Progression/   ExperienceSystem
   Pooling/       PoolService
   CameraRig/     CameraShakeService
-  UI/            PlayerStatusView, SkillBarView, SkillButtonView, WorldHealthBar, GameOverView…
+  UI/
+    Menu/        HomeMenu, GamePlayMenu               ← màn hình do UIManager quản
+    Popup/       Popup (nền chung), LoadingPopup, SettingsPopup, PausePopup, ResultPopup
+    (gốc)        PlayerStatusView, SkillBarView, HurtFlashView, VolumeSettingsView — widget con
+                 SkillButtonView, ChargeRingView, WorldHealthBar — không phải view của UIManager
+                 SafeAreaFitter, FullScreenOverlay — helper bố cục, đi kèm prefab
   Vfx/ Audio/    PooledVfx, GameAudioService
 ```
 
-Bốn quyết định đáng nói nhất:
+```
+Assets/_Project/Resources/UI/     ← chỉ chứa thứ được nạp động theo tên
+  HomeMenu · GamePlayMenu · LoadingPopup · SettingsPopup · PausePopup · ResultPopup
+```
+
+Năm quyết định đáng nói nhất:
 
 **Chỉ số là bảng tra, không phải field cứng.** `StatSet` lưu theo `EStatType` nên thêm một chỉ số
 mới chỉ tốn một dòng enum và một dòng trên Inspector, không phải sửa logic nào. Level-up chỉ là
@@ -389,6 +419,18 @@ skill, nên thêm skill thứ tư là kéo một asset vào danh sách, nút t�
 tốc độ cho khớp với con số đó**. Đổi windup trên Inspector thì hình ảnh tự khớp theo, không phải mở
 file animation ra sửa. Việc kiểm tra trúng/hụt chạy tại **đúng thời điểm gây sát thương và đọc vị trí
 người chơi lúc đó**, nên né kịp là hụt thật.
+
+**Scene `Main` không bao giờ unload.** Trước đây `SaveManager`, `SoundManager`, `GameAudioService`,
+`BestRecord`, `SaveBootstrap` và `SceneMusicPlayer` được đặt sẵn ở **cả hai** scene, nên mỗi lần đổi
+scene là chúng bị huỷ rồi tạo lại. Hệ quả đo được: chỉnh âm lượng 0.22 ở màn hình chính, vào màn chơi
+còn **0.157** — vì `SoundManager` mới nạp lại bản cũ trên đĩa. Bản vá lúc đó là ghi đĩa ngay trước khi
+rời scene; nó chữa đúng triệu chứng nhưng bệnh là *manager không nên chết theo scene*. Giờ chúng sống
+trong `Main`, còn màn chơi được nạp **additive** chồng lên. Không còn gì để vá, và cũng không cần
+`DontDestroyOnLoad`: mọi manager nhìn thấy được ngay trong Hierarchy, không có object "mồ côi" lơ lửng.
+
+Cùng lý do đó, giao diện chỉnh âm lượng chỉ còn **một** bản duy nhất. Trước đây nó bị dựng hai lần —
+một trong màn hình chính, một trong bảng tạm dừng — nên sửa bố cục phải nhớ sửa cả hai chỗ. Giờ cả
+hai nơi mở đúng cùng một `SettingsPopup`.
 
 **Về tối ưu:** mọi thứ sinh ra nhiều lần đều đi qua pool — mũi tên, đạn độc, bom, quái, mọi hiệu ứng
 hạt, bình máu. Các phép quét vùng dùng bản `NonAlloc` với bộ đệm cấp phát sẵn nên không sinh rác cho
@@ -412,7 +454,8 @@ Không có con số cân bằng nào nằm trong code. Tất cả ở `Assets/_P
 | `Waves/WaveConfig.asset` | Thành phần mỗi đợt, đợt cuối, lịch boss, bán kính sinh quái |
 | `Pickups/PickupConfig.asset` | Nhịp rơi bình máu, số bình tối đa, lượng máu hồi |
 | `Pools/PoolConfig.asset` | Số lượng khởi tạo sẵn cho từng pool |
-| `Audio/GameAudio.asset` | Toàn bộ âm thanh và âm lượng từng loại |
+| `Audio/GameAudio.asset` | Toàn bộ âm thanh, âm lượng từng loại, và hai bản nhạc nền |
+| `GameConfig.asset` | Thời gian tối thiểu của màn chuyển cảnh, số khung hình mục tiêu |
 
 ---
 
@@ -424,7 +467,7 @@ Build Settings đã cấu hình sẵn, chỉ cần chọn nền tảng và bấm
 
 | | |
 |---|---|
-| Scene trong build | `Assets/_Project/Scenes/Game.unity` ở vị trí 0 |
+| Scene trong build | `Main.unity` ở vị trí **0**, `Game.unity` ở vị trí **1** |
 | Hướng màn hình | Chỉ Landscape trái và phải (đã tắt màn hình dọc) |
 | Color space | Linear |
 | Phiên bản | 1.0 |
@@ -473,8 +516,6 @@ dụng quản lý file hoặc trình duyệt đang dùng để mở file.
 
 Ghi ra cho đầy đủ, không giấu:
 
-- **Scene HomeMenu** với nút Play và phần chỉnh âm lượng, cùng nút cài đặt trong lúc chơi để chỉnh
-  âm lượng, chơi lại và quay về màn hình chính. Hiện game vào thẳng màn chơi.
 - **Unit test EditMode** cho công thức sát thương, charge, độc và tiến trình lên cấp. Các phần này
   hiện đã được kiểm chứng bằng cách chạy thật trong Play mode (chi tiết trong `Docs/DEVLOG.md`)
   nhưng chưa được viết thành bộ test tự động chạy lại được.
