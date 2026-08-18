@@ -26,7 +26,7 @@ namespace Survival.Core
         public const string GameSceneName = "Game";
 
         /// <summary>Đường dẫn trong Resources tới tấm màn chuyển cảnh.</summary>
-        private const string LoadingScreenResourcePath = "UI/LoadingScreen";
+        private const string LoadingScreenResourcePath = "UI/" + Define.UIName.LOADING_POPUP;
 
         /// <summary>
         /// Tấm màn phải hiện ÍT NHẤT ngần này giây, kể cả khi scene đã nạp xong từ lâu.
@@ -39,7 +39,7 @@ namespace Survival.Core
         [SerializeField, Min(0f)]
         private float _minimumLoadingSeconds = 2f;
 
-        private UI.LoadingScreenView _loadingScreen;
+        private UI.LoadingPopup _loadingScreen;
         private bool _isTransitioning;
 
         /// <summary>Đang chuyển cảnh hay không. Dùng để chặn bấm nút hai lần.</summary>
@@ -134,7 +134,7 @@ namespace Survival.Core
             if (_loadingScreen != null)
                 return;
 
-            var prefab = Resources.Load<UI.LoadingScreenView>(LoadingScreenResourcePath);
+            var prefab = Resources.Load<UI.LoadingPopup>(LoadingScreenResourcePath);
             if (prefab == null)
             {
                 Debug.LogError(
