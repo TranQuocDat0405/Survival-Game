@@ -214,8 +214,8 @@ Cả hai đều **nhanh hơn người chơi**, nên không thể cứ chạy vò
 | **8** Bonus: âm thanh | ✅ Đã làm | Bắn, nổ, trúng đòn, chết, giao diện |
 | **9** Scene Play được ngay | ✅ Đã làm | Không lỗi biên dịch, không cảnh báo |
 | **9** README | ✅ Đã làm | Chính là file này |
-| **9** Bản build Windows + Android | ⏳ Chờ | Xem mục [Video và bản build](#video-và-bản-build) |
-| **9** Video gameplay | ⏳ Chờ | Xem mục [Video và bản build](#video-và-bản-build) |
+| **9** Bản build Windows + Android | ✅ Đã làm | Link tải ở mục [Video và bản build](#video-và-bản-build) |
+| **9** Video gameplay | ✅ Đã làm | Link xem ở mục [Video và bản build](#video-và-bản-build) |
 
 Toàn bộ số liệu trên đã được **kiểm chứng bằng cách chạy thật trong Play mode** chứ không chỉ đọc
 file cấu hình — chi tiết từng phép đo nằm trong [`Docs/DEVLOG.md`](Docs/DEVLOG.md).
@@ -488,7 +488,7 @@ Build Settings đã cấu hình sẵn, chỉ cần chọn nền tảng và bấm
 | Scripting backend | IL2CPP |
 | Kiến trúc | ARM64 |
 | Min SDK | 24 (Android 7.0) |
-| Package name | `com.TranQuocDat.SurvivalTopdown` |
+| Package name | `com.TranQuocDat.LastBolt` |
 | Định dạng | APK (đã tắt App Bundle để cài trực tiếp được) |
 
 `File > Build Settings > Android` → `Switch Platform` → `Build`. Lần đầu chuyển nền tảng sẽ mất khá

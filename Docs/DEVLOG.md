@@ -7,8 +7,12 @@
 |---|---|
 | Unity | 2022.3.62f3 (Built-in RP) |
 | Repo | https://github.com/TranQuocDat0405/Survival-Game |
-| Scene chính | `Assets/_Project/Scenes/Game.unity` |
+| Scene chính | `Assets/_Project/Scenes/Main.unity` — bấm Play ở scene nào cũng tự khởi động từ đây |
 | Orientation | Landscape (Left + Right) |
+
+> **Về scene chính:** tới ngày 18/08 đây còn là `Game.unity`. Sau đợt refactor kiến trúc, mọi manager
+> sống suốt vòng đời ứng dụng chuyển sang `Main.unity` và scene trận đấu được nạp additive chồng lên.
+> Xem entry cuối file.
 
 ---
 
@@ -138,12 +142,12 @@
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Repo GitHub chứa project Unity | ⬜ |
-| README nộp bài (mở scene, điều khiển, đã/chưa làm, Unity version) | ⬜ |
-| Video gameplay | ⬜ |
-| Build Windows | ⬜ |
-| Build Android APK | ⬜ |
-| Scene chính Play được ngay, 0 lỗi compile | ⬜ |
+| Repo GitHub chứa project Unity | ⬜ Repo đã có, **còn phải push đợt refactor 18/08 lên** |
+| README nộp bài (mở scene, điều khiển, đã/chưa làm, Unity version) | ✅ `README.md` ở gốc repo |
+| Video gameplay | ✅ Link Google Drive trong README |
+| Build Windows | ✅ Link Google Drive trong README |
+| Build Android APK | ✅ Link Google Drive trong README |
+| Scene chính Play được ngay, 0 lỗi compile | ✅ `Main.unity`; build Windows chạy thật cho 0 error / 0 warning |
 
 ### Ngoài spec (tự thêm)
 
@@ -157,7 +161,7 @@
 | **Shader tan biến cho quái sau khi animation chết xong** | ⬜ Ngày 3–4 |
 | **Dựng bản đồ bằng công cụ Editor** (`ArenaDresser`, `GroundTextureGenerator`) | ✅ 6304 vật, 867 vật cản có collider |
 | **Quái biết đi vòng qua cây và đá** (NavMesh chỉ dùng để hỏi đường) | ✅ 0/360 điểm sinh bị kẹt |
-| Scene HomeMenu | ⬜ |
+| Scene HomeMenu | ✅ Giờ là prefab `Resources/UI/HomeMenu.prefab` do `UIManager` quản, không còn là scene riêng |
 | Refactor bố cục ThirdParty | ⬜ |
 
 ---
