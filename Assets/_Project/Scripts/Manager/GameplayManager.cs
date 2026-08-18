@@ -115,6 +115,27 @@ namespace Survival.Manager
             SubmitBestRecord();
 
             OnGameOver?.Invoke();
+            ShowResultPopup(won: false);
+        }
+
+        /// <summary>
+        /// Mở bảng kết thúc ván và nói cho nó biết kết cục.
+        ///
+        /// CHIỀU ĐIỀU KHIỂN ĐI TỪ ĐÂY RA, không phải bảng tự nghe sự kiện rồi tự bật lên.
+        /// Bảng kết thúc giờ là một prefab được nạp theo yêu cầu, nên nó KHÔNG tồn tại vào lúc
+        /// ván bắt đầu và không thể tự đăng ký nghe gì được. Đổi lại, luồng đọc dễ hơn hẳn:
+        /// ai mở bảng đó ra thì nhìn thấy ngay tại chỗ ván kết thúc.
+        /// </summary>
+        private void ShowResultPopup(bool won)
+        {
+            if (UIManager.I == null)
+            {
+                Debug.LogWarning("[GameplayManager] Không có UIManager nên không hiện được bảng kết thúc. " +
+                                 "Nhiều khả năng scene Game đang chạy một mình, không có scene Main.", this);
+                return;
+            }
+
+            UIManager.I.Open<UI.ResultPopup>(Define.UIName.RESULT_POPUP, p => p.Show(won));
         }
 
         /// <summary>
@@ -154,6 +175,7 @@ namespace Survival.Manager
             SubmitBestRecord();
 
             OnVictory?.Invoke();
+            ShowResultPopup(won: true);
         }
 
         private void HandleEnemyDied(Enemies.EnemyActor enemy) => Kills++;

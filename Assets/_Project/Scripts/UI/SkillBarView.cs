@@ -26,7 +26,9 @@ namespace Survival.UI
         [SerializeField, Tooltip("Nút được tạo dưới nút này.")]
         private RectTransform _container;
 
-        [SerializeField, Tooltip("Để trống thì tự tìm player trong scene lúc khởi động.")]
+        [SerializeField, Tooltip(
+            "ĐỂ TRỐNG. Player sống ở scene trận đấu còn cụm nút này nằm trong prefab ở scene Main, " +
+            "nên không kéo dây sang được. Nó tự tìm PlayerActor.Current mỗi lần bật lên.")]
         private PlayerActor _player;
 
         [Header("Nút chính (đánh thường)")]
@@ -51,18 +53,58 @@ namespace Survival.UI
 
         private readonly List<SkillButtonView> _buttons = new List<SkillButtonView>();
 
-        private void Start()
+        /// <summary>
+        /// Dựng lại cụm nút MỖI LẦN màn hình bật lên, không phải một lần lúc khởi động.
+        ///
+        /// VÌ SAO KHÔNG DÙNG <c>Start</c> ĐƯỢC NỮA: cụm này nằm trong prefab do UIManager quản,
+        /// mà UIManager không huỷ view khi đóng — nó tắt đi rồi cất vào bộ nhớ đệm. <c>Start</c>
+        /// vì thế chạy đúng MỘT lần trong cả vòng đời ứng dụng, trong khi player thì chết theo
+        /// scene trận đấu. Từ trận thứ hai trở đi, mọi nút vẫn đang gọi vào một player đã bị huỷ.
+        ///
+        /// Player có thể chưa tồn tại đúng khung hình này (scene trận đấu còn đang nạp), nên
+        /// <see cref="Update"/> thử lại cho tới khi được.
+        /// </summary>
+        private void OnEnable() => TryBuild();
+
+        private void OnDisable() => Clear();
+
+        private void Update()
         {
+            if (_buttons.Count == 0)
+                TryBuild();
+        }
+
+        private void TryBuild()
+        {
+            if (_buttons.Count > 0)
+                return;
+
             if (_player == null)
                 _player = PlayerActor.Current;
 
-            if (_player == null)
-            {
-                Debug.LogError("[SkillBarView] không tìm thấy PlayerActor, không dựng được nút skill.", this);
+            if (_player == null || _player.Skills == null || _player.Skills.Count == 0)
                 return;
-            }
 
             Build();
+        }
+
+        /// <summary>
+        /// Xoá sạch nút của trận trước.
+        ///
+        /// BẮT BUỘC, không phải dọn dẹp cho gọn: các nút được sinh ra lúc chạy chứ không đặt sẵn
+        /// trong prefab. Không xoá thì mỗi lần vào trận lại đắp thêm một bộ nút mới lên bộ cũ,
+        /// và bộ cũ vẫn còn trỏ vào player đã chết — bấm vào là không có gì xảy ra.
+        /// </summary>
+        private void Clear()
+        {
+            for (int i = 0; i < _buttons.Count; i++)
+            {
+                if (_buttons[i] != null)
+                    Destroy(_buttons[i].gameObject);
+            }
+
+            _buttons.Clear();
+            _player = null;
         }
 
         private void Build()
