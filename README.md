@@ -503,9 +503,9 @@ lâu vì Unity phải nén lại toàn bộ texture.
 
 | | Đường dẫn |
 |---|---|
-| Video gameplay | _(dán link Google Drive vào đây)_ |
-| Bản build Windows | _(dán link Google Drive vào đây)_ |
-| Bản build Android (APK) | _(dán link Google Drive vào đây)_ |
+| Video gameplay | https://drive.google.com/file/d/1lzkiJFaFScun2lRtlUNf5bHMWHL8DMJA/view?usp=sharing |
+| Bản build Windows | https://drive.google.com/drive/folders/1ya_ZayZnbPNPNUpc0mTYVPs1SpCkxCHt?usp=sharing |
+| Bản build Android (APK) | https://drive.google.com/drive/folders/1Mko4F8PGBsEENj0MazSa4LCmMIJAdZI5?usp=sharing |
 
 Để cài file APK trên điện thoại Android cần bật **"Cài đặt ứng dụng không rõ nguồn gốc"** cho ứng
 dụng quản lý file hoặc trình duyệt đang dùng để mở file.
