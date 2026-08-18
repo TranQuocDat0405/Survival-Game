@@ -74,6 +74,11 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
+# Save file cua nguoi choi. Trong Editor, SaveManager cua nframework ghi vao day.
+# Khong dua vao repo: nguoi khac clone ve se thay san "thanh tich tot nhat" cua may minh,
+# trong khi cai can chung minh la tinh nang luu duoc, chu khong phai con so cu the.
+/CacheData/
+
 # MCP screenshots
 /[Aa]ssets/Screenshots/
 /[Aa]ssets/Screenshots.meta

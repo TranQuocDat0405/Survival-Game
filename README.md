@@ -4,6 +4,9 @@ Game sinh tồn góc nhìn từ trên xuống, làm bằng **Unity 2022.3.62f3**
 đơn độc giữa rừng, chống lại từng đợt quái kéo tới, lên cấp sau mỗi lần hạ gục, và cố sống sót
 qua **5 đợt** — trong đó đợt 3 và đợt 5 có boss.
 
+Game mang tên **Last Bolt** — tên đó hiện trên màn hình chính, trong video và trong package name của
+bản Android. "Survival Top-down" ở tiêu đề là tên của **đề bài**, giữ nguyên cho khớp với spec.
+
 Đây là bài test kỹ thuật cho vị trí thực tập tại **Wolffun Games**. Đề bài gốc nằm ở
 [`Docs/README.md`](Docs/README.md); nhật ký toàn bộ quá trình làm nằm ở [`Docs/DEVLOG.md`](Docs/DEVLOG.md).
 
