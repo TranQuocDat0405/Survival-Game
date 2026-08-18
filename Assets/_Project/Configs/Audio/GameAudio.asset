@@ -60,3 +60,5 @@ MonoBehaviour:
     _sound: {fileID: 11400000, guid: 6eb98c64034d35249bc1ebed913db811, type: 2}
     _volume: 1
     _minInterval: 0.05
+  _musicHome: {fileID: 11400000, guid: 89a36ac3879cfa342bdf66fa62adfd8a, type: 2}
+  _musicIngame: {fileID: 11400000, guid: 19ce45739bdb7f94d866dd0d93360a14, type: 2}

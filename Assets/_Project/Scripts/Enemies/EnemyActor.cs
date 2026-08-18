@@ -713,7 +713,7 @@ namespace Survival.Enemies
             //
             // PHẢI KIỂM TRA OBJECT CÒN BẬT KHÔNG trước khi mở coroutine. Unity không cho khởi động
             // coroutine trên một object đã tắt, và nó ném ra một dòng cảnh báo đỏ.
-            // Tình huống đó có thật: lúc bấm Chơi lại, GameSession gọi KillAll rồi mới DespawnAll,
+            // Tình huống đó có thật: lúc bấm Chơi lại, GameplayManager gọi KillAll rồi mới DespawnAll,
             // nên một con đã được trả về pool (đã tắt) vẫn có thể nhận lệnh chết ngay sau đó.
             // Object đã tắt thì cũng chẳng cần chờ animation gục — trả thẳng về pool là đúng.
             if (_despawnDelay > 0f && isActiveAndEnabled)

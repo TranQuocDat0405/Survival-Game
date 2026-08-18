@@ -1,5 +1,5 @@
 using NFramework;
-using Survival.Core;
+using Survival.Manager;
 using Survival.Pooling;
 using Survival.Progression;
 using TMPro;
@@ -52,11 +52,11 @@ namespace Survival.UI
         [SerializeField, Min(0f), Tooltip("Bán kính rải pháo hoa quanh người chơi, tính bằng unit.")]
         private float _victoryVfxRadius = 4f;
 
-        private GameSession _session;
+        private GameplayManager _session;
 
         private void Start()
         {
-            _session = GameSession.I;
+            _session = GameplayManager.I;
 
             if (_panel != null)
                 _panel.SetActive(false);

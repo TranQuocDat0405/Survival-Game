@@ -1,4 +1,5 @@
 using Survival.Core;
+using Survival.Manager;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -37,14 +38,14 @@ namespace Survival.UI
             "Phím mở và đóng bảng trên máy tính. Đây là phím mà ai cũng thử đầu tiên.")]
         private KeyCode _toggleKey = KeyCode.Escape;
 
-        private GameSession _session;
+        private GameplayManager _session;
         private Player.KeyboardSkillInput _keyboardInput;
 
         public bool IsPaused { get; private set; }
 
         private void Start()
         {
-            _session = GameSession.I;
+            _session = GameplayManager.I;
 
             var player = Player.PlayerActor.Current;
             if (player != null)
@@ -93,7 +94,7 @@ namespace Survival.UI
                 return;
 
             // Hết ván rồi thì phím này không còn tác dụng.
-            if (_session != null && _session.State != EGameState.Playing)
+            if (_session != null && _session.State != EGameplayState.Playing)
                 return;
 
             if (IsPaused) Close();
@@ -105,7 +106,7 @@ namespace Survival.UI
             if (IsPaused)
                 return;
 
-            if (_session != null && _session.State != EGameState.Playing)
+            if (_session != null && _session.State != EGameplayState.Playing)
                 return;
 
             IsPaused = true;

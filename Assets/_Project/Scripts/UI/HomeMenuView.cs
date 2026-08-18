@@ -1,5 +1,5 @@
 using Survival.Core;
-using Survival.Progression;
+using Survival.Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -74,7 +74,7 @@ namespace Survival.UI
             if (_bestRecordText == null)
                 return;
 
-            var record = BestRecord.I;
+            var record = UserData.I;
             if (record == null || !record.HasRecord)
             {
                 _bestRecordText.gameObject.SetActive(false);

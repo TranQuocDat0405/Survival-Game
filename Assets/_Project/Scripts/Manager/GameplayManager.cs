@@ -6,9 +6,18 @@ using Survival.Progression;
 using Survival.Waves;
 using UnityEngine;
 
-namespace Survival.Core
+namespace Survival.Manager
 {
-    public enum EGameState
+    /// <summary>
+    /// Trạng thái của MỘT VÁN CHƠI — không phải trạng thái của ứng dụng.
+    ///
+    /// ⚠️ HẬU TỐ "Gameplay" LÀ CỐ Ý, ĐỪNG RÚT GỌN THÀNH "EGameState".
+    /// Ngay trong namespace này còn một enum nữa mang đúng cái tên ngắn đó, mô tả trạng thái
+    /// của cả ỨNG DỤNG (đang tải / màn hình chính / trong trận). Để hai enum trùng tên là loại
+    /// lỗi tệ nhất có thể tự tạo ra: file nào chỉ <c>using</c> một trong hai sẽ BIÊN DỊCH SẠCH
+    /// mà so sánh nhầm enum, không một dòng cảnh báo nào.
+    /// </summary>
+    public enum EGameplayState
     {
         Playing = 0,
         GameOver = 1,
@@ -29,7 +38,7 @@ namespace Survival.Core
     /// đưa chỉ số player về ban đầu, đặt lại cấp, và khởi động lại chuỗi wave.
     /// Gom vào một nơi để không có chỗ nào bị quên khi bấm Chơi lại.
     /// </summary>
-    public class GameSession : SingletonMono<GameSession>
+    public class GameplayManager : SingletonMono<GameplayManager>
     {
         [SerializeField, Tooltip("Vị trí player được đặt về khi bắt đầu ván mới.")]
         private Transform _playerSpawnPoint;
@@ -40,7 +49,7 @@ namespace Survival.Core
         /// <summary>Bắn ra khi một ván mới bắt đầu.</summary>
         public event Action OnRestarted;
 
-        public EGameState State { get; private set; } = EGameState.Playing;
+        public EGameplayState State { get; private set; } = EGameplayState.Playing;
 
         private Player.PlayerActor _player;
 
@@ -80,7 +89,7 @@ namespace Survival.Core
 
             if (_player == null)
             {
-                Debug.LogError("[GameSession] không tìm thấy PlayerActor.", this);
+                Debug.LogError("[GameplayManager] không tìm thấy PlayerActor.", this);
                 return;
             }
 
@@ -89,10 +98,10 @@ namespace Survival.Core
 
         private void HandlePlayerDied(Combat.Health health)
         {
-            if (State != EGameState.Playing)
+            if (State != EGameplayState.Playing)
                 return;
 
-            State = EGameState.GameOver;
+            State = EGameplayState.GameOver;
 
             // Chốt đồng hồ. Quên dòng này là bảng tổng kết lúc THUA hiện thời gian ÂM, vì
             // ElapsedSeconds lúc đó lấy _runEndTime (còn đang bằng 0) trừ đi _runStartTime.
@@ -117,7 +126,7 @@ namespace Survival.Core
         private void SubmitBestRecord()
         {
             int wave = WaveManager.I != null ? WaveManager.I.CurrentWave : 0;
-            Progression.BestRecord.I?.Submit(wave, Kills, ElapsedSeconds);
+            Data.UserData.I?.Submit(wave, Kills, ElapsedSeconds);
         }
 
         /// <summary>Bắn ra khi clear xong wave cuối. Giao diện nghe để hiện bảng chiến thắng.</summary>
@@ -127,17 +136,17 @@ namespace Survival.Core
         public int Kills { get; private set; }
 
         /// <summary>Ván chơi đã kéo dài bao lâu, tính bằng giây.</summary>
-        public float ElapsedSeconds => State == EGameState.Playing ? Time.time - _runStartTime : _runEndTime - _runStartTime;
+        public float ElapsedSeconds => State == EGameplayState.Playing ? Time.time - _runStartTime : _runEndTime - _runStartTime;
 
         private float _runStartTime;
         private float _runEndTime;
 
         private void HandleAllWavesCleared(int finalWave)
         {
-            if (State != EGameState.Playing)
+            if (State != EGameplayState.Playing)
                 return;
 
-            State = EGameState.Victory;
+            State = EGameplayState.Victory;
             _runEndTime = Time.time;
 
             // Không cần dừng WaveManager: nó đã tự dừng ngay khi phát hiện wave cuối đã clear.
@@ -176,7 +185,7 @@ namespace Survival.Core
             Kills = 0;
             _runStartTime = Time.time;
 
-            State = EGameState.Playing;
+            State = EGameplayState.Playing;
             OnRestarted?.Invoke();
         }
     }

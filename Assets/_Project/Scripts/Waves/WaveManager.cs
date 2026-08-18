@@ -117,7 +117,7 @@ namespace Survival.Waves
         /// Bắn ra khi người chơi clear xong wave cuối cùng. Đây là tín hiệu THẮNG MÀN.
         ///
         /// WaveManager chỉ báo sự việc chứ không tự dựng giao diện — việc quyết định ván chơi
-        /// kết thúc thế nào là của <c>GameSession</c>, cùng cách nó đang xử lý lúc thua.
+        /// kết thúc thế nào là của <c>GameplayManager</c>, cùng cách nó đang xử lý lúc thua.
         /// </summary>
         public event System.Action<int> OnAllWavesCleared;
 

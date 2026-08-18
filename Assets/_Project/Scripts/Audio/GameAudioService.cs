@@ -37,5 +37,39 @@ namespace Survival.Audio
         public static void PlayLevelUp() => Config?.LevelUp.Play();
         public static void PlayPickup() => Config?.Pickup.Play();
         public static void PlayUiClick() => Config?.UiClick.Play();
+
+        #region Nhạc nền
+
+        /// <summary>
+        /// Nhạc nền do <c>GameManager</c> phát theo trạng thái ứng dụng, không phải do scene tự phát.
+        ///
+        /// VÌ SAO ĐỔI CÁCH LÀM: trước đây mỗi scene có một <c>SceneMusicPlayer</c> tự khai báo bản
+        /// nhạc của mình. Cách đó chỉ chạy được khi mỗi màn hình là một scene riêng. Sau refactor,
+        /// màn hình chính và màn chơi dùng CHUNG một scene nền (Main) nên không còn "scene của màn
+        /// hình chính" để gắn component vào nữa — thứ đổi khi người chơi đi lại giữa hai màn hình
+        /// là TRẠNG THÁI, và trạng thái thì thuộc về GameManager.
+        ///
+        /// Vẫn không dùng chuỗi đường dẫn kiểu <c>PlayMusicResource("Audio/Music/menu")</c>: tham
+        /// chiếu thẳng tới asset thì gõ sai là lỗi biên dịch, còn gõ sai một chuỗi thì im lặng.
+        /// </summary>
+        public static void PlayHomeMusic() => PlayMusic(Config?.MusicHome);
+
+        public static void PlayIngameMusic() => PlayMusic(Config?.MusicIngame);
+
+        public static void StopMusic()
+        {
+            if (SoundManager.I != null)
+                SoundManager.I.StopMusic(0.3f);
+        }
+
+        private static void PlayMusic(SoundSO music)
+        {
+            if (music == null || music.clip == null || SoundManager.I == null)
+                return;
+
+            SoundManager.I.PlayMusic(music, loop: true);
+        }
+
+        #endregion
     }
 }

@@ -2,7 +2,7 @@ using System;
 using NFramework;
 using UnityEngine;
 
-namespace Survival.Progression
+namespace Survival.Data
 {
     /// <summary>
     /// Ghi nhớ thành tích tốt nhất người chơi từng đạt, và giữ lại sau khi tắt game.
@@ -15,10 +15,10 @@ namespace Survival.Progression
     /// wave bằng nhau thì mới xét số quái đã hạ. Gộp thành điểm thì phải bịa ra tỉ giá quy đổi
     /// giữa "một wave" và "một con quái" — con số đó không có căn cứ nào cả.
     ///
-    /// Việc đăng ký với <c>SaveManager</c> KHÔNG nằm ở đây mà nằm ở <see cref="SaveBootstrap"/>,
+    /// Việc đăng ký với <c>SaveManager</c> KHÔNG nằm ở đây mà nằm ở nơi khởi động ứng dụng,
     /// vì thứ tự đăng ký so với lúc nạp dữ liệu là quan trọng và nên nhìn thấy được ở một chỗ.
     /// </summary>
-    public class BestRecord : SingletonMono<BestRecord>, ISaveable
+    public class UserData : SingletonMono<UserData>, ISaveable
     {
         [Serializable]
         public class SaveData
@@ -58,6 +58,12 @@ namespace Survival.Progression
 
         #region ISaveable
 
+        /// <summary>
+        /// ⚠️ CỐ TÌNH KHÔNG TRÙNG TÊN LỚP. Lớp này trước đây tên là <c>BestRecord</c>, và chuỗi
+        /// dưới đây chính là khoá mà dữ liệu đã lưu trên máy người chơi đang dùng.
+        /// Sửa nó cho "khớp tên lớp" là làm mất sạch thành tích của mọi bản cài sẵn có —
+        /// và hỏng luôn phép thử "thành tích còn nguyên sau khi tắt app".
+        /// </summary>
         public string SaveKey => "BestRecord";
 
         public bool DataChanged { get; set; }

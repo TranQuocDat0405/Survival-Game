@@ -1,3 +1,4 @@
+using NFramework;
 using UnityEngine;
 
 namespace Survival.Audio
@@ -65,6 +66,21 @@ namespace Survival.Audio
         [Header("Giao diện")]
         [SerializeField, Tooltip("Bấm nút bất kỳ trên màn hình.")]
         private GameSound _uiClick = new GameSound();
+
+        [Header("Nhạc nền")]
+        // Nhạc nền dùng thẳng SoundSO chứ KHÔNG bọc trong GameSound như mọi tiếng ở trên.
+        // GameSound tồn tại để chặn nhiều tiếng giống nhau nổ chồng lên nhau trong cùng một
+        // khoảnh khắc; nhạc nền thì chỉ có đúng một bản chạy tại một thời điểm và nó chạy liên
+        // tục, nên khoảng nghỉ tối thiểu không có nghĩa gì. Nó cũng đi qua kênh Music của mixer
+        // chứ không phải kênh SFX, tức là thanh trượt "Nhạc" trong phần cài đặt điều khiển nó.
+        [SerializeField, Tooltip("Nhạc ở màn hình chính.")]
+        private SoundSO _musicHome;
+
+        [SerializeField, Tooltip("Nhạc trong lúc chơi.")]
+        private SoundSO _musicIngame;
+
+        public SoundSO MusicHome => _musicHome;
+        public SoundSO MusicIngame => _musicIngame;
 
         public GameSound Shoot => _shoot;
         public GameSound BombExplode => _bombExplode;

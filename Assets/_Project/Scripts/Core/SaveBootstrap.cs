@@ -41,8 +41,8 @@ namespace Survival.Core
                 SaveManager.I.RegisterSaveData(SoundManager.I);
 
             // Thành tích tốt nhất hiển thị ở màn hình chính.
-            if (Progression.BestRecord.I != null)
-                SaveManager.I.RegisterSaveData(Progression.BestRecord.I);
+            if (Data.UserData.I != null)
+                SaveManager.I.RegisterSaveData(Data.UserData.I);
 
             // Nạp SAU CÙNG, khi mọi thứ cần nạp đã đăng ký xong.
             SaveManager.I.Load();
